@@ -1,6 +1,6 @@
 package com.ndc.gayquy.dto.fundraiser;
 
-import com.ndc.gayquy.common.enums.TrangThaiBaiTaiTro;
+import com.ndc.gayquy.common.enums.TrangThaiBaiDang;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
@@ -35,8 +35,8 @@ public class UpdateCampaignRequest {
     @Digits(integer = 15, fraction = 2, message = "Số tiền không hợp lệ")
     private BigDecimal mucTieu;
 
-    @Schema(description = "Trạng thái bài tài trợ", example = "DANG_VAN_DONG")
-    private TrangThaiBaiTaiTro trangThai;
+    @Schema(description = "Trạng thái bài tài trợ", example = "DADUYET")
+    private TrangThaiBaiDang trangThai;
 
     @Schema(description = "Thời gian bắt đầu vận động", example = "2026-11-01T08:00:00")
     private LocalDateTime ngayBatDau;

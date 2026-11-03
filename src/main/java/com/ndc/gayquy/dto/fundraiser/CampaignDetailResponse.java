@@ -1,6 +1,6 @@
 package com.ndc.gayquy.dto.fundraiser;
 
-import com.ndc.gayquy.common.enums.TrangThaiBaiTaiTro;
+import com.ndc.gayquy.common.enums.TrangThaiBaiDang;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
@@ -33,8 +33,8 @@ public class CampaignDetailResponse {
     @Schema(description = "Tổng tiền đã nhận thực tế (VNĐ)", example = "85000000.00")
     private BigDecimal tongTienDaNhan;
 
-    @Schema(description = "Trạng thái bài đăng", example = "DANG_VAN_DONG")
-    private TrangThaiBaiTaiTro trangThai;
+    @Schema(description = "Trạng thái bài đăng", example = "DADUYET")
+    private TrangThaiBaiDang trangThai;
 
     @Schema(description = "Mã cán bộ phụ trách", example = "3")
     private Long maCanBo;

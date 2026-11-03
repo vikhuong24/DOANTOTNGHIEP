@@ -61,7 +61,7 @@ public class DistributionService {
                 .tenDot(request.getTenDot().trim())
                 .tongTien(tongTien)
                 .ngayTrao(request.getNgayTrao())
-                .trangThai(TrangThaiDotPhanBo.ChoDuyet)
+                .trangThai(TrangThaiDotPhanBo.CHODUYET)
                 .canBo(canBo)
                 .hieuTruong(null)
                 .build();

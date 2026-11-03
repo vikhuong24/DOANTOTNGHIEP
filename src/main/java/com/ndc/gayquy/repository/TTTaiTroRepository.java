@@ -1,6 +1,6 @@
 package com.ndc.gayquy.repository;
 
-import com.ndc.gayquy.common.enums.TrangThaiBaiTaiTro;
+import com.ndc.gayquy.common.enums.TrangThaiBaiDang;
 import com.ndc.gayquy.entity.TTTaiTro;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,14 +17,16 @@ import java.util.List;
 @Repository
 public interface TTTaiTroRepository extends JpaRepository<TTTaiTro, Long> {
 
-    List<TTTaiTro> findByTrangThai(TrangThaiBaiTaiTro trangThai);
+    List<TTTaiTro> findByTrangThai(TrangThaiBaiDang trangThai);
+
+    List<TTTaiTro> findByTrangThaiInOrderByMaBaiTaiTroDesc(Collection<TrangThaiBaiDang> statuses);
 
     List<TTTaiTro> findByCanBo_MaNguoiDung(Long maCanBo);
 
     List<TTTaiTro> findByCanBo_MaNguoiDungOrderByMaBaiTaiTroDesc(Long maCanBo);
 
     @Query("SELECT t FROM TTTaiTro t WHERE t.trangThai IN (:statuses) AND (:keyword IS NULL OR LOWER(t.tieuDe) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    Page<TTTaiTro> findActiveCampaigns(@Param("statuses") Collection<TrangThaiBaiTaiTro> statuses, @Param("keyword") String keyword, Pageable pageable);
+    Page<TTTaiTro> findActiveCampaigns(@Param("statuses") Collection<TrangThaiBaiDang> statuses, @Param("keyword") String keyword, Pageable pageable);
 
     /**
      * Cộng dồn số tiền vào tongtiendanhan của bài tài trợ tương ứng.

@@ -1,6 +1,6 @@
 package com.ndc.gayquy.service.guest;
 
-import com.ndc.gayquy.common.enums.TrangThaiBaiTaiTro;
+import com.ndc.gayquy.common.enums.TrangThaiBaiDang;
 import com.ndc.gayquy.common.enums.TrangThaiTaiTro;
 import com.ndc.gayquy.common.exception.AppException;
 import com.ndc.gayquy.common.exception.ErrorCode;
@@ -43,12 +43,10 @@ public class CampaignService {
     public PageCustomResponse<CampaignSummaryResponse> layDanhSachBaiDang(String keyword, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("maBaiTaiTro").descending());
 
-        // Hỗ trợ các trạng thái hợp lệ của bài đăng
-        List<TrangThaiBaiTaiTro> validStatuses = Arrays.asList(
-                TrangThaiBaiTaiTro.DANG_VAN_DONG,
-                TrangThaiBaiTaiTro.DangChay,
-                TrangThaiBaiTaiTro.DaDuyet,
-                TrangThaiBaiTaiTro.HOAN_THANH
+        // Hỗ trợ các trạng thái hợp lệ của bài đăng (đã duyệt hoặc kết thúc)
+        List<TrangThaiBaiDang> validStatuses = Arrays.asList(
+                TrangThaiBaiDang.DADUYET,
+                TrangThaiBaiDang.KETTHUC
         );
 
         String searchKeyword = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
@@ -66,8 +64,8 @@ public class CampaignService {
         TTTaiTro campaign = ttTaiTroRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BAI_TAI_TRO_NOT_FOUND));
 
-        // Lấy danh sách các lượt tài trợ đã thành công (THANH_CONG hoặc DaNhan)
-        List<TrangThaiTaiTro> successStatuses = Arrays.asList(TrangThaiTaiTro.THANH_CONG, TrangThaiTaiTro.DaNhan);
+        // Lấy danh sách các lượt tài trợ đã thành công (DANHAN)
+        List<TrangThaiTaiTro> successStatuses = List.of(TrangThaiTaiTro.DANHAN);
         List<TaiTro> donations = taiTroRepository.findByBaiTaiTro_MaBaiTaiTro(id).stream()
                 .filter(t -> successStatuses.contains(t.getTrangThai()))
                 .collect(Collectors.toList());

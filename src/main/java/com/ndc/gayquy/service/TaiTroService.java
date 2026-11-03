@@ -8,7 +8,7 @@ import java.util.List;
 public interface TaiTroService {
 
     /**
-     * Xác nhận đóng góp tài trợ: cập nhật trạng thái THANH_CONG
+     * Xác nhận đóng góp tài trợ: cập nhật trạng thái DANHAN
      * và cộng dồn số tiền thực tế vào tongtiendanhan của bảng TT_TAITRO
      *
      * @param maTaiTro Mã đóng góp

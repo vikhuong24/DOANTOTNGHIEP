@@ -1,6 +1,6 @@
 package com.ndc.gayquy.service.fundraiser;
 
-import com.ndc.gayquy.common.enums.TrangThaiBaiTaiTro;
+import com.ndc.gayquy.common.enums.TrangThaiBaiDang;
 import com.ndc.gayquy.common.exception.AppException;
 import com.ndc.gayquy.common.exception.ErrorCode;
 import com.ndc.gayquy.dto.fundraiser.CampaignDetailResponse;
@@ -35,9 +35,9 @@ public class CampaignService {
         NguoiDung canBo = nguoiDungRepository.findById(canBoId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        TrangThaiBaiTaiTro initialStatus = request.getTrangThai() != null
+        TrangThaiBaiDang initialStatus = request.getTrangThai() != null
                 ? request.getTrangThai()
-                : TrangThaiBaiTaiTro.DANG_VAN_DONG;
+                : TrangThaiBaiDang.CHODUYET;
 
         TTTaiTro campaign = TTTaiTro.builder()
                 .tieuDe(request.getTieuDe().trim())

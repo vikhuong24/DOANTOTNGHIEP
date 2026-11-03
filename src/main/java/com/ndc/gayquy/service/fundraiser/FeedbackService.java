@@ -43,11 +43,11 @@ public class FeedbackService {
 
         phanHoi.setNoiDungTraLoi(request.getNoiDungTraLoi().trim());
         phanHoi.setCanBo(canBo);
-        phanHoi.setTrangThai(TrangThaiPhanHoi.DaXuLy);
+        phanHoi.setTrangThai(TrangThaiPhanHoi.DAXULY);
         phanHoi.setNgayTraLoi(LocalDateTime.now());
 
         PhanHoi saved = phanHoiRepository.save(phanHoi);
-        log.info("Đã cập nhật câu trả lời cho phản hồi #{}, trạng thái chuyển sang DaXuLy", maPhanHoi);
+        log.info("Đã cập nhật câu trả lời cho phản hồi #{}, trạng thái chuyển sang DAXULY", maPhanHoi);
 
         return mapToFeedbackResponse(saved);
     }

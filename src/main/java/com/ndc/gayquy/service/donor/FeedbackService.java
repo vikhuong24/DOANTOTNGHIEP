@@ -56,7 +56,7 @@ public class FeedbackService {
                 .dotPhanBo(dotPhanBo)
                 .tieuDe(request.getTieuDe().trim())
                 .noiDung(request.getNoiDung().trim())
-                .trangThai(TrangThaiPhanHoi.CHO_XU_LY)
+                .trangThai(TrangThaiPhanHoi.CHOXULY)
                 .ngayGui(LocalDateTime.now())
                 .build();
 

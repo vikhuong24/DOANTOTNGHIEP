@@ -67,7 +67,7 @@ public class TaiTro {
             this.ngayGui = LocalDateTime.now();
         }
         if (this.trangThai == null) {
-            this.trangThai = TrangThaiTaiTro.CHO_XAC_NHAN;
+            this.trangThai = TrangThaiTaiTro.CHODUYET;
         }
         if (this.soTienDk == null) {
             this.soTienDk = BigDecimal.ZERO;

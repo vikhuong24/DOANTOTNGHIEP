@@ -55,7 +55,7 @@ public class DotPhanBo {
             this.tongTien = BigDecimal.ZERO;
         }
         if (this.trangThai == null) {
-            this.trangThai = TrangThaiDotPhanBo.LEN_KE_HOACH;
+            this.trangThai = TrangThaiDotPhanBo.CHODUYET;
         }
     }
 }

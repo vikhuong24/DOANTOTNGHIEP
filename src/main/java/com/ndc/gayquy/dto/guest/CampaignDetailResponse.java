@@ -1,6 +1,6 @@
 package com.ndc.gayquy.dto.guest;
 
-import com.ndc.gayquy.common.enums.TrangThaiBaiTaiTro;
+import com.ndc.gayquy.common.enums.TrangThaiBaiDang;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -21,7 +21,7 @@ public class CampaignDetailResponse {
     private BigDecimal mucTieu;
     private BigDecimal tongTienDaNhan;
     private Double phanTramHoanThanh;
-    private TrangThaiBaiTaiTro trangThai;
+    private TrangThaiBaiDang trangThai;
     private LocalDateTime ngayBatDau;
     private LocalDateTime ngayKetThuc;
     private Long maCanBo;

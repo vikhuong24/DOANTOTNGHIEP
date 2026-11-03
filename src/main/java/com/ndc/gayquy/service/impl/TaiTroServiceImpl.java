@@ -46,7 +46,7 @@ public class TaiTroServiceImpl implements TaiTroService {
                 .orElseThrow(() -> new AppException(ErrorCode.TAI_TRO_NOT_FOUND));
 
         // Kiểm tra nếu đã xác nhận trước đó
-        if (taiTro.getTrangThai() == TrangThaiTaiTro.THANH_CONG) {
+        if (taiTro.getTrangThai() == TrangThaiTaiTro.DANHAN) {
             throw new AppException(ErrorCode.INVALID_STATUS_TRANSITION, "Đóng góp này đã được xác nhận thành công trước đó!");
         }
 
@@ -59,8 +59,8 @@ public class TaiTroServiceImpl implements TaiTroService {
             throw new AppException(ErrorCode.INVALID_AMOUNT);
         }
 
-        // 3. Cập nhật bản ghi đóng góp sang trạng thái THANH_CONG
-        taiTro.setTrangThai(TrangThaiTaiTro.THANH_CONG);
+        // 3. Cập nhật bản ghi đóng góp sang trạng thái DANHAN
+        taiTro.setTrangThai(TrangThaiTaiTro.DANHAN);
         taiTro.setSoTienTt(soTienThucTe);
         taiTro.setCanBo(canBo);
         taiTro.setNgayNhan(LocalDateTime.now());

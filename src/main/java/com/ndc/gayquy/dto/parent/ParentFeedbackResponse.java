@@ -41,7 +41,7 @@ public class ParentFeedbackResponse {
     @Schema(description = "Tên cán bộ trả lời phản hồi", example = "Cô Lê Phương Thảo (Cán Bộ)")
     private String tenCanBoTraLoi;
 
-    @Schema(description = "Trạng thái xử lý phản hồi", example = "DA_TRA_LOI")
+    @Schema(description = "Trạng thái xử lý phản hồi", example = "DAXULY")
     private TrangThaiPhanHoi trangThai;
 
     @Schema(description = "Thời gian gửi phản hồi", example = "2026-02-20T10:00:00")

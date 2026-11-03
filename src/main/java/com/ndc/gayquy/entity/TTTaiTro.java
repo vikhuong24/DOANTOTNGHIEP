@@ -1,6 +1,6 @@
 package com.ndc.gayquy.entity;
 
-import com.ndc.gayquy.common.enums.TrangThaiBaiTaiTro;
+import com.ndc.gayquy.common.enums.TrangThaiBaiDang;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -41,7 +41,7 @@ public class TTTaiTro {
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "trangthai", length = 30)
-    private TrangThaiBaiTaiTro trangThai;
+    private TrangThaiBaiDang trangThai;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "macanbo", nullable = false)
@@ -66,7 +66,7 @@ public class TTTaiTro {
             this.mucTieu = BigDecimal.ZERO;
         }
         if (this.trangThai == null) {
-            this.trangThai = TrangThaiBaiTaiTro.DANG_KHOI_TAO;
+            this.trangThai = TrangThaiBaiDang.NHAP;
         }
     }
 }

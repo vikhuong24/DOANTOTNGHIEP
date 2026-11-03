@@ -78,6 +78,7 @@ public class SecurityConfig {
                         .requestMatchers("/donor/**").hasAnyRole("NHATAITRO", "NHT", "ADMIN")
                         .requestMatchers("/parent/**").hasAnyRole("PHUHUYNH", "ADMIN")
                         .requestMatchers("/fundraiser/**").hasAnyRole("CANBO", "ADMIN")
+                        .requestMatchers("/principal/**").hasAnyRole("HIEUTRUONG", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

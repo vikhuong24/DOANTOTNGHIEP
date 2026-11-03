@@ -42,7 +42,7 @@ public class StudentSupportHistoryResponse {
     @Schema(description = "Ghi chú phân bổ", example = "Học bổng vượt khó kỳ 1")
     private String ghiChu;
 
-    @Schema(description = "Trạng thái đợt phân bổ", example = "HOAN_THANH")
+    @Schema(description = "Trạng thái đợt phân bổ", example = "DATRAO")
     private TrangThaiDotPhanBo trangThaiDotPhanBo;
 
     @Schema(description = "Ngày tổ chức trao", example = "2026-02-10T09:00:00")

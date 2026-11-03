@@ -64,7 +64,7 @@ public class PhanHoi {
             this.ngayGui = LocalDateTime.now();
         }
         if (this.trangThai == null) {
-            this.trangThai = TrangThaiPhanHoi.CHO_XU_LY;
+            this.trangThai = TrangThaiPhanHoi.CHOXULY;
         }
     }
 }

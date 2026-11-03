@@ -24,10 +24,10 @@ public class FeedbackController {
     private final FeedbackService feedbackService;
 
     @Operation(summary = "Lấy danh sách phản hồi từ người dùng",
-            description = "Trả về danh sách phản hồi của nhà hảo tâm và phụ huynh. Có thể lọc theo trạng thái (CHO_XU_LY, DA_TRA_LOI, DaXuLy, DONG).")
+            description = "Trả về danh sách phản hồi của nhà hảo tâm và phụ huynh. Có thể lọc theo trạng thái (CHOXULY, DAXULY, TUCHOI).")
     @GetMapping
     public ApiResponse<List<FundraiserFeedbackResponse>> getFeedbacks(
-            @Parameter(description = "Trạng thái phản hồi", example = "CHO_XU_LY")
+            @Parameter(description = "Trạng thái phản hồi", example = "CHOXULY")
             @RequestParam(value = "trangThai", required = false) TrangThaiPhanHoi trangThai
     ) {
         List<FundraiserFeedbackResponse> response = feedbackService.getFeedbacks(trangThai);
@@ -45,8 +45,8 @@ public class FeedbackController {
         return ApiResponse.success(response);
     }
 
-    @Operation(summary = "Trả lời phản hồi (Chuyển trạng thái sang DaXuLy)",
-            description = "Cán bộ nhập nội dung trả lời cho phản hồi. Hệ thống lưu câu trả lời, ghi nhận cán bộ xử lý và cập nhật trangthai='DaXuLy'.")
+    @Operation(summary = "Trả lời phản hồi (Chuyển trạng thái sang DAXULY)",
+            description = "Cán bộ nhập nội dung trả lời cho phản hồi. Hệ thống lưu câu trả lời, ghi nhận cán bộ xử lý và cập nhật trangthai='DAXULY'.")
     @PutMapping("/{id}/reply")
     public ApiResponse<FundraiserFeedbackResponse> replyFeedback(
             @Parameter(description = "Mã phản hồi", example = "2")
@@ -55,6 +55,6 @@ public class FeedbackController {
     ) {
         Long canBoId = SecurityUtils.getCurrentUserId();
         FundraiserFeedbackResponse response = feedbackService.replyFeedback(id, canBoId, request);
-        return ApiResponse.success("Đã trả lời phản hồi thành công (trạng thái DaXuLy)", response);
+        return ApiResponse.success("Đã trả lời phản hồi thành công (trạng thái DAXULY)", response);
     }
 }

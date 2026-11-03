@@ -1,6 +1,6 @@
 package com.ndc.gayquy.service.fundraiser;
 
-import com.ndc.gayquy.common.enums.LoaiTaiLieuMinhChung;
+import com.ndc.gayquy.common.enums.LoaiTaiLieu;
 import com.ndc.gayquy.common.exception.AppException;
 import com.ndc.gayquy.common.exception.ErrorCode;
 import com.ndc.gayquy.dto.fundraiser.FundraiserEvidenceResponse;
@@ -99,7 +99,7 @@ public class EvidenceService {
         }
 
         // 3. Chuẩn hóa loại tài liệu minh chứng
-        LoaiTaiLieuMinhChung loai = LoaiTaiLieuMinhChung.from(loaiTaiLieuStr);
+        LoaiTaiLieu loai = LoaiTaiLieu.from(loaiTaiLieuStr);
 
         // 4. Tạo đối tượng MINHCHUNG lưu vào Database
         MinhChung minhChung = MinhChung.builder()

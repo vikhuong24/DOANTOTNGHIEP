@@ -1,6 +1,6 @@
 package com.ndc.gayquy.dto.fundraiser;
 
-import com.ndc.gayquy.common.enums.LoaiTaiLieuMinhChung;
+import com.ndc.gayquy.common.enums.LoaiTaiLieu;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
@@ -29,8 +29,8 @@ public class FundraiserEvidenceResponse {
     @Schema(description = "Tên đợt phân bổ", example = "Đợt 1 - Trao 25 suất học bổng học kỳ 1 năm học 2025-2026")
     private String tenDotPhanBo;
 
-    @Schema(description = "Loại tài liệu minh chứng", example = "BIEN_BAN")
-    private LoaiTaiLieuMinhChung loaiTaiLieu;
+    @Schema(description = "Loại tài liệu minh chứng", example = "HOADON")
+    private LoaiTaiLieu loaiTaiLieu;
 
     @Schema(description = "Đường dẫn tải / xem tệp minh chứng", example = "/uploads/proofs/bien_ban_trao_hoc_bong_dot1.pdf")
     private String duongDanTep;

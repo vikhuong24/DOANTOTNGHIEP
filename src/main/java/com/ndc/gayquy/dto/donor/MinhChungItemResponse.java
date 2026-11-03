@@ -1,6 +1,6 @@
 package com.ndc.gayquy.dto.donor;
 
-import com.ndc.gayquy.common.enums.LoaiTaiLieuMinhChung;
+import com.ndc.gayquy.common.enums.LoaiTaiLieu;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 public class MinhChungItemResponse {
 
     private Long maMinhChung;
-    private LoaiTaiLieuMinhChung loaiTaiLieu;
+    private LoaiTaiLieu loaiTaiLieu;
     private String duongDanTep;
     private String moTa;
     private LocalDateTime ngayTaiLen;

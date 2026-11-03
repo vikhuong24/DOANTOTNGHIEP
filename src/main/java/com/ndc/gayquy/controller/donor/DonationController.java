@@ -25,13 +25,13 @@ public class DonationController {
     private final DonationService donationService;
 
     @Operation(summary = "Đăng ký ủng hộ cho một bài gây quỹ (Tạo bản ghi TAITRO)",
-            description = "Tạo yêu cầu đóng góp với trạng thái mặc định là 'ChoDuyet' kèm hình ảnh minh chứng chuyển khoản.")
+            description = "Tạo yêu cầu đóng góp với trạng thái mặc định là 'CHODUYET' kèm hình ảnh minh chứng chuyển khoản.")
     @PostMapping("/donations/register")
     public ApiResponse<Map<String, Object>> registerDonation(@Valid @RequestBody DonationRegisterRequest request) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         Long maTaiTro = donationService.registerDonation(currentUserId, request);
         return ApiResponse.success("Đăng ký ủng hộ thành công, vui lòng chờ cán bộ nhà trường đối soát",
-                Map.of("maTaiTro", maTaiTro, "trangThai", "ChoDuyet"));
+                Map.of("maTaiTro", maTaiTro, "trangThai", "CHODUYET"));
     }
 
     @Operation(summary = "Tạo đề xuất tài trợ mới (Tạo bản ghi DEXUATTAITRO)",
@@ -41,7 +41,7 @@ public class DonationController {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         Long maDeXuat = donationService.proposeDonation(currentUserId, request);
         return ApiResponse.success("Gửi đề xuất tài trợ thành công, nhà trường sẽ xem xét và phản hồi sớm",
-                Map.of("maDeXuat", maDeXuat, "trangThai", "ChoDuyet"));
+                Map.of("maDeXuat", maDeXuat, "trangThai", "CHODUYET"));
     }
 
     @Operation(summary = "Theo dõi tiến độ các bài đăng đã ủng hộ kèm minh chứng",

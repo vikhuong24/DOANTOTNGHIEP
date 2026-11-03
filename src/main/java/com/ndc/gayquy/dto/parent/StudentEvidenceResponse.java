@@ -1,6 +1,6 @@
 package com.ndc.gayquy.dto.parent;
 
-import com.ndc.gayquy.common.enums.LoaiTaiLieuMinhChung;
+import com.ndc.gayquy.common.enums.LoaiTaiLieu;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
@@ -29,8 +29,8 @@ public class StudentEvidenceResponse {
     @Schema(description = "Tiêu đề bài tài trợ liên quan", example = "Quỹ học bổng Ánh Sáng Tương Lai năm học 2026")
     private String tieuDeBaiTaiTro;
 
-    @Schema(description = "Loại tài liệu minh chứng", example = "BIEN_BAN")
-    private LoaiTaiLieuMinhChung loaiTaiLieu;
+    @Schema(description = "Loại tài liệu minh chứng", example = "HOADON")
+    private LoaiTaiLieu loaiTaiLieu;
 
     @Schema(description = "Đường dẫn tải / xem tệp minh chứng", example = "/uploads/proofs/bien_ban_trao_hoc_bong_dot1.pdf")
     private String duongDanTep;

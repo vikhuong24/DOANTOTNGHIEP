@@ -1,6 +1,6 @@
 package com.ndc.gayquy.service.donor;
 
-import com.ndc.gayquy.common.enums.TrangThaiBaiTaiTro;
+import com.ndc.gayquy.common.enums.TrangThaiBaiDang;
 import com.ndc.gayquy.common.enums.TrangThaiDeXuat;
 import com.ndc.gayquy.common.enums.TrangThaiTaiTro;
 import com.ndc.gayquy.common.exception.AppException;
@@ -60,7 +60,7 @@ public class DonationService {
                 .soTienDk(request.getSoTienDk())
                 .soTienTt(BigDecimal.ZERO)
                 .anhGiaoDich(anhGiaoDich)
-                .trangThai(TrangThaiTaiTro.ChoDuyet)
+                .trangThai(TrangThaiTaiTro.CHODUYET)
                 .ghiChu(ghiChu)
                 .ngayGui(LocalDateTime.now())
                 .build();
@@ -93,7 +93,7 @@ public class DonationService {
                 .tieuDe(request.getTieuDe().trim())
                 .soTienDx(request.getSoTienDx())
                 .mucDichSd(request.getMucDichSd().trim())
-                .trangThai(TrangThaiDeXuat.ChoDuyet)
+                .trangThai(TrangThaiDeXuat.CHODUYET)
                 .ngayGui(LocalDateTime.now())
                 .build();
 
@@ -124,7 +124,7 @@ public class DonationService {
 
             // Tính tổng tiền donor này đã đóng góp thành công cho chiến dịch này
             BigDecimal totalDonatedByMe = donations.stream()
-                    .filter(t -> t.getTrangThai() == TrangThaiTaiTro.THANH_CONG || t.getTrangThai() == TrangThaiTaiTro.DaNhan)
+                    .filter(t -> t.getTrangThai() == TrangThaiTaiTro.DANHAN)
                     .map(TaiTro::getSoTienTt)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -175,7 +175,7 @@ public class DonationService {
         List<DeXuatTaiTro> deXuats = deXuatTaiTroRepository.findByNguoiDung_MaNguoiDung(userId);
 
         BigDecimal tongTienThanhCong = taiTros.stream()
-                .filter(t -> t.getTrangThai() == TrangThaiTaiTro.THANH_CONG || t.getTrangThai() == TrangThaiTaiTro.DaNhan)
+                .filter(t -> t.getTrangThai() == TrangThaiTaiTro.DANHAN)
                 .map(TaiTro::getSoTienTt)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

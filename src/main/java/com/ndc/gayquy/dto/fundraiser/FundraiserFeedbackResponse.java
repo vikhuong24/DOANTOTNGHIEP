@@ -56,7 +56,7 @@ public class FundraiserFeedbackResponse {
     @Schema(description = "Tên cán bộ xử lý", example = "Cô Lê Phương Thảo (Cán Bộ)")
     private String tenCanBo;
 
-    @Schema(description = "Trạng thái phản hồi", example = "DaXuLy")
+    @Schema(description = "Trạng thái phản hồi", example = "DAXULY")
     private TrangThaiPhanHoi trangThai;
 
     @Schema(description = "Thời gian gửi phản hồi", example = "2026-02-20T10:00:00")

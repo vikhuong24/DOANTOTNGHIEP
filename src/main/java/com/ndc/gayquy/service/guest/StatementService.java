@@ -24,16 +24,13 @@ public class StatementService {
     private final TaiTroRepository taiTroRepository;
 
     /**
-     * Sao kê công khai các khoản tiền tài trợ đã tiếp nhận thành công (trangthai = 'DaNhan' hoặc 'THANH_CONG')
+     * Sao kê công khai các khoản tiền tài trợ đã tiếp nhận thành công (trangthai = 'DANHAN')
      */
     @Transactional(readOnly = true)
     public PageCustomResponse<StatementResponse> layDanhSachSaoKe(Long maBaiTaiTro, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
 
-        List<TrangThaiTaiTro> receivedStatuses = Arrays.asList(
-                TrangThaiTaiTro.DaNhan,
-                TrangThaiTaiTro.THANH_CONG
-        );
+        List<TrangThaiTaiTro> receivedStatuses = List.of(TrangThaiTaiTro.DANHAN);
 
         Page<TaiTro> pageResult = taiTroRepository.findPublicStatements(receivedStatuses, maBaiTaiTro, pageable);
 

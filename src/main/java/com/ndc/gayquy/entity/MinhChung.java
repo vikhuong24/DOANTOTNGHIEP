@@ -1,6 +1,6 @@
 package com.ndc.gayquy.entity;
 
-import com.ndc.gayquy.common.enums.LoaiTaiLieuMinhChung;
+import com.ndc.gayquy.common.enums.LoaiTaiLieu;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -33,7 +33,7 @@ public class MinhChung {
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "loaitailieu", length = 50)
-    private LoaiTaiLieuMinhChung loaiTaiLieu;
+    private LoaiTaiLieu loaiTaiLieu;
 
     @Column(name = "duongdantep", nullable = false)
     private String duongDanTep;

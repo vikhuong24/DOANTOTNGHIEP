@@ -33,7 +33,8 @@ public class OpenApiConfig {
                         new Tag().name("Guest").description("Các API dành cho Khách vãng lai (Đăng ký, Đăng nhập, Bài đăng, Sao kê, Học sinh)"),
                         new Tag().name("Donor").description("Các API dành cho Nhà hảo tâm (Hồ sơ, Đóng góp tài trợ, Đề xuất, Tiến độ & Minh chứng, Lịch sử, Phản hồi)"),
                         new Tag().name("Parent").description("Các API dành cho Phụ huynh học sinh (Danh sách con, Lịch sử hỗ trợ, Minh chứng trao tặng, Phản hồi)"),
-                        new Tag().name("Fundraiser").description("Các API dành cho Cán bộ quản lý gây quỹ (Bài đăng, Duyệt đề xuất & xác nhận tiền, Phân bổ, Minh chứng, Phản hồi)")
+                        new Tag().name("Fundraiser").description("Các API dành cho Cán bộ quản lý gây quỹ (Bài đăng, Duyệt đề xuất & xác nhận tiền, Phân bổ, Minh chứng, Phản hồi)"),
+                        new Tag().name("Principal").description("Các API dành cho Hiệu trưởng (Phê duyệt bài đăng, Phê duyệt đợt phân bổ, Báo cáo tài chính, Giám sát phản hồi)")
                 ))
                 .addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME))
                 .components(new Components()

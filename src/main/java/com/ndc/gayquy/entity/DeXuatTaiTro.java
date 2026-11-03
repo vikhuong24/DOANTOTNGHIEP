@@ -64,7 +64,7 @@ public class DeXuatTaiTro {
             this.ngayGui = LocalDateTime.now();
         }
         if (this.trangThai == null) {
-            this.trangThai = TrangThaiDeXuat.CHO_DUYET;
+            this.trangThai = TrangThaiDeXuat.CHODUYET;
         }
         if (this.soTienDx == null) {
             this.soTienDx = BigDecimal.ZERO;

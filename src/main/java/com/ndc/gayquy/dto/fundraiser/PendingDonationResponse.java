@@ -48,7 +48,7 @@ public class PendingDonationResponse {
     @Schema(description = "Ảnh biên lai chuyển khoản / ủy nhiệm chi", example = "/uploads/receipts/bill_05.jpg")
     private String anhGiaoDich;
 
-    @Schema(description = "Trạng thái đóng góp", example = "CHO_XAC_NHAN")
+    @Schema(description = "Trạng thái đóng góp", example = "CHODUYET")
     private TrangThaiTaiTro trangThai;
 
     @Schema(description = "Ghi chú của người đóng góp", example = "Ủng hộ sách cho các cháu")

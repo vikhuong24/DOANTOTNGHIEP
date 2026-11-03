@@ -51,7 +51,7 @@ public class ApprovalController {
     // ==========================================
 
     @Operation(summary = "Lấy danh sách đăng ký ủng hộ chờ duyệt / xác nhận",
-            description = "Lấy toàn bộ các lượt đăng ký đóng góp đang ở trạng thái CHO_XAC_NHAN hoặc ChoDuyet.")
+            description = "Lấy toàn bộ các lượt đăng ký đóng góp đang ở trạng thái CHODUYET.")
     @GetMapping("/donations")
     public ApiResponse<List<PendingDonationResponse>> getPendingDonations() {
         List<PendingDonationResponse> response = approvalService.getPendingDonations();
@@ -59,7 +59,7 @@ public class ApprovalController {
     }
 
     @Operation(summary = "Duyệt / Từ chối đăng ký tài trợ",
-            description = "Cán bộ duyệt (trangthai = 'DaDuyet') hoặc từ chối (trangthai = 'TuChoi', lưu lý do vào trường ghichu).")
+            description = "Cán bộ duyệt (trangthai = 'DADUYET') hoặc từ chối (trangthai = 'TUCHOI', lưu lý do vào trường ghichu).")
     @PutMapping("/donations/{id}")
     public ApiResponse<PendingDonationResponse> processDonationApproval(
             @Parameter(description = "Mã đăng ký tài trợ", example = "5")
