@@ -1,0 +1,25 @@
+.principal-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg);
+}
+.principal-layout__body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+.principal-layout__main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  min-width: 0;
+}
+@media (max-width: 768px) {
+  .principal-layout__body {
+    flex-direction: column;
+  }
+  .principal-layout__main {
+    padding: 1rem;
+  }
+}

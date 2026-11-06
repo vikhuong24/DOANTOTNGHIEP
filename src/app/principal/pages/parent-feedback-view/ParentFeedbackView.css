@@ -1,0 +1,19 @@
+.parent-feedback-view { max-width: 1100px; margin: 0 auto; }
+.pfv-header { margin-bottom: 1.5rem; }
+.pfv-header h1 { font-size: 1.5rem; font-weight: 800; margin: 0 0 0.25rem; }
+.pfv-header p { color: #666; margin: 0; font-size: 0.9rem; }
+.pfv-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.pfv-title { font-weight: 600; max-width: 240px; display: block; }
+.pfv-camp { font-size: 0.85rem; color: #555; max-width: 160px; display: block; }
+.pfv-badge { display: inline-block; padding: 0.2em 0.65em; border-radius: 100px; font-size: 0.75rem; font-weight: 700; }
+.pfv-badge--done { background: #e8f5e9; color: #2e7d32; }
+.pfv-badge--pending { background: #fff8e1; color: #e65100; }
+.pfv-btn { display: flex; align-items: center; gap: 0.375rem; background: #e8eaff; color: #4361ee; border: none; border-radius: 6px; padding: 0.375rem 0.75rem; cursor: pointer; font-size: 0.8rem; font-family: inherit; transition: all 0.15s; }
+.pfv-btn:hover { background: #4361ee; color: #fff; }
+.pfv-detail { display: flex; flex-direction: column; gap: 1rem; }
+.pfv-detail__meta { display: flex; flex-wrap: gap: 0.75rem 1.5rem; font-size: 0.875rem; }
+.pfv-detail__section p { margin: 0.375rem 0 0; color: #444; line-height: 1.6; font-size: 0.9rem; }
+.pfv-detail__reply { background: #e8f5e9; border-radius: 8px; padding: 1rem; }
+.pfv-detail__reply p { margin: 0.375rem 0 0; color: #2e7d32; font-size: 0.9rem; line-height: 1.6; }
+.pfv-detail__reply small { color: #666; font-size: 0.8rem; }
+.pfv-detail__no-reply { background: #fff8e1; border-radius: 8px; padding: 0.875rem 1rem; color: #e65100; font-size: 0.875rem; }

@@ -1,0 +1,161 @@
+.scholarship-distribution-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.distribution-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1.8fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 992px) {
+  .distribution-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dist-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.two-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 576px) {
+  .two-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+.calc-summary-box {
+  background: #f0f7f4;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1px solid rgba(46, 125, 91, 0.2);
+}
+
+.calc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9375rem;
+}
+
+.title-with-count {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+
+.btn-select-all {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.btn-select-all:hover {
+  text-decoration: underline;
+}
+
+.student-filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-chip-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #777;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.chip {
+  background: #f5f5f5;
+  border: 1px solid var(--border);
+  padding: 0.25rem 0.65rem;
+  border-radius: 14px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chip:hover {
+  border-color: var(--primary);
+}
+
+.chip.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.students-checkbox-list {
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-right: 0.25rem;
+}
+
+.student-item-check {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafaf7;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.student-item-check:hover {
+  background: #fff;
+  border-color: #bbb;
+}
+
+.student-item-check.selected {
+  background: #f0f7f4;
+  border-color: var(--primary);
+}
+
+.student-item-check input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.student-check-name {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text);
+}
+
+.student-check-sub {
+  font-size: 0.8125rem;
+  color: #777;
+}

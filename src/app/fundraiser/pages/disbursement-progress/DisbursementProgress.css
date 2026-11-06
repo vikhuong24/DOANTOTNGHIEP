@@ -1,0 +1,85 @@
+.disbursement-progress-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.campaign-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.select-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #666;
+  white-space: nowrap;
+}
+
+.select-campaign {
+  min-width: 280px;
+}
+
+.disbursement-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.stat-box .card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.5rem;
+}
+
+.stat-title {
+  font-size: 0.875rem;
+  color: #777;
+  font-weight: 500;
+}
+
+.stat-amount {
+  font-size: 1.625rem;
+  font-weight: 700;
+}
+
+.stat-sub {
+  font-size: 0.8125rem;
+  color: #888;
+}
+
+.progress-overview-card .card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9375rem;
+}
+
+.link-evidence-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  text-decoration: none;
+}
+
+.link-evidence-preview:hover {
+  text-decoration: underline;
+}
+
+.disburse-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}

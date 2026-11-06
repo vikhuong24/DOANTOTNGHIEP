@@ -1,0 +1,223 @@
+.register-split-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f6f3;
+  padding: 2rem 1rem;
+}
+
+.register-split-container {
+  width: 100%;
+  max-width: 1120px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+@media (max-width: 960px) {
+  .register-split-container {
+    grid-template-columns: 1fr;
+    max-width: 540px;
+  }
+  .register-showcase-panel {
+    display: none;
+  }
+}
+
+/* Cột trái */
+.register-showcase-panel {
+  background: linear-gradient(145deg, #1f573e 0%, #2e7d5b 60%, #3e946f 100%);
+  color: #fff;
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+.register-showcase-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.register-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 0.4rem 0.85rem;
+  border-radius: 20px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  width: fit-content;
+  backdrop-filter: blur(4px);
+}
+
+.register-showcase-title {
+  font-size: 1.85rem;
+  font-weight: 800;
+  line-height: 1.35;
+  color: #fff;
+  margin: 0;
+}
+
+.register-showcase-desc {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+}
+
+.register-benefit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.benefit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.benefit-icon {
+  font-size: 1.25rem;
+  color: #f4a261;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.register-quote {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-left: 3px solid #f4a261;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Cột phải */
+.register-form-panel {
+  padding: 3rem 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+
+.register-form-inner {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.register-header-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.register-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.register-heading {
+  font-size: 1.625rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+
+.register-subtext {
+  font-size: 0.875rem;
+  color: #666;
+  margin: 0;
+}
+
+.register-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.form-two-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 480px) {
+  .form-two-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+.terms-checkbox-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.terms-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: #666;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.terms-label input[type='checkbox'] {
+  margin-top: 2px;
+  accent-color: var(--primary);
+}
+
+.terms-link {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.register-footer-links {
+  font-size: 0.8125rem;
+  color: #666;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1.25rem;
+}
+
+.login-now-link {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.login-now-link:hover {
+  text-decoration: underline;
+}

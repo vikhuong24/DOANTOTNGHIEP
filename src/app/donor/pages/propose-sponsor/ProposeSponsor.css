@@ -1,0 +1,48 @@
+.propose-page {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.propose-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.propose-title {
+  font-size: 1.6rem;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.propose-desc {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.propose-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.propose-guidelines {
+  background: #fdfaf3;
+  border: 1px solid #f5e4c3;
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  font-size: 0.85rem;
+  color: #7d5a29;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.propose-guidelines ul {
+  padding-left: 1.25rem;
+  margin-top: 0.5rem;
+  list-style: disc;
+}

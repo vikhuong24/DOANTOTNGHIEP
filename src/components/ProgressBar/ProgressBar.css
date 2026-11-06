@@ -1,0 +1,11 @@
+.progress-wrap { display: flex; flex-direction: column; gap: 0.375rem; }
+.progress-label {
+  display: flex; justify-content: space-between;
+  font-size: 0.8125rem; color: #666;
+}
+.progress-percent { font-weight: 700; color: var(--text); }
+.progress-track {
+  width: 100%; background: var(--border);
+  border-radius: 100px; overflow: hidden;
+}
+.progress-bar { height: 100%; border-radius: 100px; }

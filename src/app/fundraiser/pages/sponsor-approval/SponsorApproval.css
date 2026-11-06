@@ -1,0 +1,67 @@
+.sponsor-approval-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sponsor-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.badge--pending {
+  background: #fff8e1;
+  color: #f57f17;
+}
+
+.badge--approved {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.badge--received {
+  background: #e8f8f0;
+  color: var(--primary);
+}
+
+.badge--rejected {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.sponsor-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.sponsor-note-box {
+  margin-top: 0.5rem;
+  padding: 1rem;
+  background: #fafaf7;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.note-title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.note-text {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #555;
+  margin: 0;
+  font-style: italic;
+}

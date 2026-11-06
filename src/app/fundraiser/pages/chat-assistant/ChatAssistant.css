@@ -1,0 +1,38 @@
+.fundraiser-chat-assistant-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: calc(100vh - 160px);
+}
+
+.chat-bubble-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 0.5rem;
+}
+
+.bubble-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn-bubble-action {
+  background: none;
+  border: none;
+  font-size: 0.75rem;
+  color: #666;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-bubble-action:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text);
+}

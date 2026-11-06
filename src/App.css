@@ -1,0 +1,6 @@
+/* App.css - Layout wrapper tổng thể */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}

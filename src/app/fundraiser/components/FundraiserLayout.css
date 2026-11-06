@@ -1,0 +1,27 @@
+.fundraiser-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg);
+}
+
+.fundraiser-body {
+  display: flex;
+  flex: 1;
+}
+
+.fundraiser-main {
+  flex: 1;
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .fundraiser-main {
+    padding: 1rem;
+  }
+}
