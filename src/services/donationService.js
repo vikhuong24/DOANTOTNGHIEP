@@ -3,14 +3,15 @@ import api, { unwrap, unwrapList } from './api';
 import { DONATION_STATUS } from '../utils/constants';
 
 /**
- * Chuẩn hóa bản ghi tài trợ
+ * Chuẩn hóa bản ghi tài trợ hoặc bản ghi sao kê
  */
-const normalizeDonation = (d) => {
+export const normalizeDonation = (d) => {
   if (!d) return null;
   const id = d.maTaiTro || d.id;
-  const amount = Number(d.soitendk ?? d.soTienDk ?? d.amount ?? 0);
-  const actualAmount = Number(d.soitentt ?? d.soTienTt ?? d.actualAmount ?? amount);
-  const status = d.trangthai || d.trangThai || DONATION_STATUS.CHODUYET;
+  const amount = Number(d.soTienDk ?? d.soitendk ?? d.amount ?? 0);
+  const actualAmount = Number(d.soTienTt ?? d.soTienTT ?? d.soitentt ?? amount);
+  const status = d.trangThai || d.trangthai || DONATION_STATUS.DANHAN;
+  const receivedDate = d.ngayNhan || d.ngaynhan || d.ngaygui || d.ngayGui;
 
   return {
     ...d,
@@ -18,8 +19,8 @@ const normalizeDonation = (d) => {
     maTaiTro: id,
     maBaiTaiTro: d.maBaiTaiTro || d.campaignId,
     tieuDeBaiTaiTro: d.tieuDeBaiTaiTro || d.tieude || d.campaignTitle || '',
-    tenhienthi: d.tenhienthi || d.tenHienThi || d.donorName || 'Nhà hảo tâm',
-    tenHienThi: d.tenhienthi || d.tenHienThi || d.donorName || 'Nhà hảo tâm',
+    tenhienthi: d.tenHienThi || d.tenhienthi || d.donorName || 'Nhà hảo tâm ẩn danh',
+    tenHienThi: d.tenHienThi || d.tenhienthi || d.donorName || 'Nhà hảo tâm ẩn danh',
     soitendk: amount,
     soTienDk: amount,
     soitentt: actualAmount,
@@ -29,17 +30,20 @@ const normalizeDonation = (d) => {
     trangthai: status,
     trangThai: status,
     status,
-    anhgiaodich: d.anhgiaodich || d.anhGiaoDich || null,
-    anhGiaoDich: d.anhgiaodich || d.anhGiaoDich || null,
-    ghichu: d.ghichu || d.ghiChu || '',
-    ghiChu: d.ghichu || d.ghiChu || '',
-    ngaygui: d.ngaygui || d.ngayGui,
-    ngaynhan: d.ngaynhan || d.ngayNhan,
+    anhgiaodich: d.anhGiaoDich || d.anhgiaodich || null,
+    anhGiaoDich: d.anhGiaoDich || d.anhgiaodich || null,
+    ghichu: d.ghiChu || d.ghichu || '',
+    ghiChu: d.ghiChu || d.ghichu || '',
+    ngaygui: d.ngayGui || d.ngaygui || receivedDate,
+    ngayGui: d.ngayGui || d.ngaygui || receivedDate,
+    ngaynhan: receivedDate,
+    ngayNhan: receivedDate,
   };
 };
 
 /**
  * Lấy danh sách toàn bộ sao kê / đóng góp công khai
+ * Endpoint: GET /guest/statements
  * @param {object} params - { maBaiTaiTro, page, size }
  */
 export const getAllDonations = async (params = {}) => {
@@ -48,12 +52,23 @@ export const getAllDonations = async (params = {}) => {
       params: {
         maBaiTaiTro: params.maBaiTaiTro || undefined,
         page: params.page !== undefined ? params.page : 0,
-        size: params.size || 50,
+        size: params.size || 20,
       },
     });
+
+    const pageData = unwrap(res);
     const rawList = unwrapList(res);
     const enriched = rawList.map(normalizeDonation);
-    return { data: enriched, items: enriched, total: enriched.length };
+
+    return {
+      data: enriched,
+      items: enriched,
+      total: pageData?.totalElements ?? enriched.length,
+      totalElements: pageData?.totalElements ?? enriched.length,
+      totalPages: pageData?.totalPages ?? 1,
+      currentPage: pageData?.currentPage ?? 0,
+      isLast: pageData?.isLast ?? pageData?.last ?? true,
+    };
   } catch (err) {
     console.error('Lỗi khi lấy danh sách sao kê tài trợ:', err);
     throw err;
@@ -61,6 +76,7 @@ export const getAllDonations = async (params = {}) => {
 };
 
 export const getDonations = getAllDonations;
+export const getStatements = getAllDonations;
 
 /**
  * Lấy lịch sử đóng góp của Nhà hảo tâm hiện tại

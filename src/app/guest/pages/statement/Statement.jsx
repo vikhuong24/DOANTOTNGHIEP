@@ -1,86 +1,93 @@
 // Statement: Bảng sao kê minh bạch các khoản tài trợ công khai
-import { useState, useEffect, useMemo } from 'react';
+// Kết nối trực tiếp API Backend Spring Boot: GET /guest/statements
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Loading from '../../../../components/Loading/Loading';
 import EmptyState from '../../../../components/EmptyState/EmptyState';
+import Pagination from '../../../../components/Pagination/Pagination';
 import { getAllDonations } from '../../../../services/donationService';
 import { getAllCampaigns } from '../../../../services/campaignService';
 import { formatCurrency } from '../../../../utils/formatCurrency';
 import { formatDate } from '../../../../utils/formatDate';
-import { DONATION_STATUS_LABEL } from '../../../../utils/constants';
 import './Statement.css';
 
 const Statement = () => {
   const [donations, setDonations] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Filters
   const [selectedCampaign, setSelectedCampaign] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
+  // 1. Tải danh mục các chiến dịch để đưa vào combobox lọc
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchCampaigns = async () => {
       try {
-        setLoading(true);
-        const [donsRes, campsRes] = await Promise.all([
-          getAllDonations(),
-          getAllCampaigns(),
-        ]);
-        setDonations(donsRes.data || []);
-        setCampaigns(campsRes.data || []);
+        const res = await getAllCampaigns({ size: 100 });
+        setCampaigns(res.items || res.data || []);
       } catch (err) {
-        console.error('Lỗi tải bảng sao kê:', err);
-      } finally {
-        setLoading(false);
+        console.error('Lỗi khi tải danh sách chiến dịch cho bộ lọc sao kê:', err);
       }
     };
-    fetchData();
+    fetchCampaigns();
   }, []);
 
-  // Map tên chiến dịch
-  const campaignTitleMap = useMemo(() => {
-    const map = {};
-    campaigns.forEach((c) => {
-      map[c.maBaiTaiTro] = c.tieude;
-    });
-    return map;
-  }, [campaigns]);
+  // 2. Tải danh sách sao kê từ Backend theo chiến dịch được chọn và phân trang
+  const fetchStatements = useCallback(async (campaignId, page) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getAllDonations({
+        maBaiTaiTro: campaignId ? Number(campaignId) : undefined,
+        page: page - 1, // Spring Boot phân trang từ 0
+        size: 50,
+      });
 
-  // Lọc dữ liệu sao kê (chỉ hiển thị các khoản đã nhận / hoàn thành / đã duyệt)
+      setDonations(res.items || res.data || []);
+      setTotalPages(res.totalPages || 1);
+    } catch (err) {
+      console.error('Lỗi tải bảng sao kê:', err);
+      setError(err?.message || 'Không thể tải dữ liệu sao kê từ máy chủ');
+      setDonations([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStatements(selectedCampaign, currentPage);
+  }, [fetchStatements, selectedCampaign, currentPage]);
+
+  // Lọc theo ngày từ client (nếu người dùng chọn khoảng ngày)
   const filteredDonations = useMemo(() => {
     return donations.filter((d) => {
-      // Filter dự án
-      if (selectedCampaign && String(d.maBaiTaiTro) !== selectedCampaign) {
-        return false;
-      }
+      const dateVal = d.ngayNhan || d.ngaynhan || d.ngayGui || d.ngaygui;
 
-      // Filter ngày
       if (fromDate) {
-        const dDate = new Date(d.ngaygui || d.ngayGui);
+        if (!dateVal) return false;
+        const dDate = new Date(dateVal);
         if (dDate < new Date(fromDate)) return false;
       }
 
       if (toDate) {
-        const dDate = new Date(d.ngaygui || d.ngayGui);
+        if (!dateVal) return false;
+        const dDate = new Date(dateVal);
         const end = new Date(toDate);
         end.setHours(23, 59, 59, 999);
         if (dDate > end) return false;
       }
 
-      // Chỉ sao kê các khoản tài trợ ĐÃ ĐƯỢC DUYỆT hoặc ĐÃ TIẾP NHẬN THỰC TẾ
-      // Các khoản từ chối (TuChoi) hoặc chưa duyệt (ChoDuyet) không đưa lên sao kê
-      const isApprovedOrReceived =
-        d.trangthai === 'DaDuyet' || d.trangthai === 'DaNhan' || d.trangthai === 'HoanThanh';
-      if (!isApprovedOrReceived) return false;
-
       return true;
     });
-  }, [donations, selectedCampaign, fromDate, toDate]);
+  }, [donations, fromDate, toDate]);
 
   // Tổng tiền các khoản hiển thị
   const totalAmount = useMemo(() => {
-    return filteredDonations.reduce((sum, d) => sum + (d.soTienTT ?? d.soTienDK ?? d.amount ?? 0), 0);
+    return filteredDonations.reduce((sum, d) => sum + (d.soTienTt || 0), 0);
   }, [filteredDonations]);
 
   return (
@@ -99,12 +106,15 @@ const Statement = () => {
           <select
             id="filter-campaign"
             value={selectedCampaign}
-            onChange={(e) => setSelectedCampaign(e.target.value)}
+            onChange={(e) => {
+              setSelectedCampaign(e.target.value);
+              setCurrentPage(1);
+            }}
           >
             <option value="">Tất cả các chương trình</option>
             {campaigns.map((c) => (
               <option key={c.maBaiTaiTro} value={c.maBaiTaiTro}>
-                {c.tieude}
+                {c.tieuDe}
               </option>
             ))}
           </select>
@@ -138,6 +148,7 @@ const Statement = () => {
               setSelectedCampaign('');
               setFromDate('');
               setToDate('');
+              setCurrentPage(1);
             }}
           >
             Xóa bộ lọc
@@ -151,10 +162,24 @@ const Statement = () => {
           <div style={{ padding: '3rem 0' }}>
             <Loading type="skeleton" rows={6} />
           </div>
+        ) : error ? (
+          <EmptyState
+            title="Đã xảy ra lỗi khi tải sao kê"
+            description={error}
+            actionLabel="Thử lại"
+            onAction={() => fetchStatements(selectedCampaign, currentPage)}
+          />
         ) : filteredDonations.length === 0 ? (
           <EmptyState
             title="Không có bản ghi sao kê nào"
             description="Không tìm thấy giao dịch quyên góp nào phù hợp với bộ lọc ngày hoặc dự án đã chọn."
+            actionLabel={selectedCampaign || fromDate || toDate ? 'Xóa bộ lọc' : undefined}
+            onAction={() => {
+              setSelectedCampaign('');
+              setFromDate('');
+              setToDate('');
+              setCurrentPage(1);
+            }}
           />
         ) : (
           <>
@@ -163,28 +188,34 @@ const Statement = () => {
                 <thead>
                   <tr>
                     <th style={{ width: '60px', textAlign: 'center' }}>STT</th>
-                    <th style={{ width: '130px' }}>Ngày giao dịch</th>
+                    <th style={{ width: '130px' }}>Ngày tiếp nhận</th>
                     <th>Người ủng hộ</th>
                     <th style={{ textAlign: 'right' }}>Số tiền (VNĐ)</th>
                     <th>Chương trình / Dự án</th>
-                    <th style={{ width: '140px' }}>Trạng thái</th>
+                    <th>Ghi chú</th>
+                    <th style={{ width: '150px', textAlign: 'center' }}>Trạng thái</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredDonations.map((don, idx) => (
                     <tr key={don.maTaiTro}>
                       <td style={{ textAlign: 'center', color: '#888' }}>{idx + 1}</td>
-                      <td>{formatDate(don.ngaygui || don.ngayGui)}</td>
+                      <td>{don.ngayNhan ? formatDate(don.ngayNhan) : 'Mới đây'}</td>
                       <td style={{ fontWeight: 600 }}>
                         {don.tenHienThi || 'Nhà hảo tâm ẩn danh'}
                       </td>
                       <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--primary)' }}>
-                        {formatCurrency(don.soTienTT ?? don.soTienDK ?? don.amount ?? 0)}
+                        {formatCurrency(don.soTienTt || 0)}
                       </td>
-                      <td>{campaignTitleMap[don.maBaiTaiTro] || `Dự án #${don.maBaiTaiTro}`}</td>
                       <td>
+                        {don.tieuDeBaiTaiTro || `Dự án #${don.maBaiTaiTro || 'Toàn trường'}`}
+                      </td>
+                      <td style={{ color: '#666', fontSize: '0.875rem' }}>
+                        {don.ghiChu || '—'}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
                         <span className="badge badge--success">
-                          {don.trangthai === 'DaDuyet' ? 'Đã duyệt' : 'Đã tiếp nhận thực tế'}
+                          Đã tiếp nhận thực tế
                         </span>
                       </td>
                     </tr>
@@ -201,6 +232,16 @@ const Statement = () => {
                 <span className="statement-total-val">{formatCurrency(totalAmount)}</span>
               </div>
             </div>
+
+            {totalPages > 1 && (
+              <div style={{ padding: '1rem', borderTop: '1px solid #f0f0f0' }}>
+                <Pagination
+                  page={currentPage}
+                  totalPages={totalPages}
+                  onChange={(page) => setCurrentPage(page)}
+                />
+              </div>
+            )}
           </>
         )}
       </div>

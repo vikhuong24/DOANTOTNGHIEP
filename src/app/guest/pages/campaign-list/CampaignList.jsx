@@ -1,5 +1,6 @@
 // CampaignList: Danh sách bài kêu gọi tài trợ dành cho khách vãng lai
-import { useState, useEffect, useMemo } from 'react';
+// Kết nối trực tiếp API Backend Spring Boot: GET /guest/campaigns
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiClock, FiSearch } from 'react-icons/fi';
 import Card from '../../../../components/Card/Card';
@@ -20,51 +21,45 @@ const CampaignList = () => {
 
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const campsRes = await getAllCampaigns();
-        setCampaigns(campsRes.data || []);
-      } catch (err) {
-        console.error('Lỗi tải dữ liệu chiến dịch:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+  // Gọi API lấy danh sách chiến dịch kèm tìm kiếm và phân trang từ Backend
+  const fetchCampaigns = useCallback(async (page, keyword) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getAllCampaigns({
+        keyword: keyword || undefined,
+        page: page - 1, // Spring Boot phân trang từ 0
+        size: ITEMS_PER_PAGE,
+      });
+
+      setCampaigns(res.items || res.data || []);
+      setTotalPages(res.totalPages || 1);
+      setTotalElements(res.totalElements ?? (res.items || []).length);
+    } catch (err) {
+      console.error('Lỗi tải dữ liệu chiến dịch:', err);
+      setError(err?.message || 'Không thể tải danh sách chiến dịch từ máy chủ');
+      setCampaigns([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // Lọc chiến dịch theo từ khóa tìm kiếm
-  const filteredCampaigns = useMemo(() => {
-    return campaigns.filter((camp) => {
-      // Chỉ hiển thị các bài ĐangChay, DaDuyet, KetThuc cho khách xem
-      const isValidStatus = ['DangChay', 'DaDuyet', 'KetThuc'].includes(camp.trangthai);
-      if (!isValidStatus) return false;
+  // Tải danh sách khi đổi trang hoặc khi đổi từ khóa tìm kiếm (kèm debounce 400ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchCampaigns(currentPage, searchQuery);
+    }, 350);
 
-      // Search keyword
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchTitle = camp.tieude?.toLowerCase().includes(q);
-        const matchDesc = camp.noidung?.toLowerCase().includes(q);
-        if (!matchTitle && !matchDesc) return false;
-      }
-
-      return true;
-    });
-  }, [campaigns, searchQuery]);
-
-  // Phân trang
-  const totalPages = Math.ceil(filteredCampaigns.length / ITEMS_PER_PAGE) || 1;
-  const paginatedCampaigns = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredCampaigns.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredCampaigns, currentPage]);
+    return () => clearTimeout(timer);
+  }, [fetchCampaigns, currentPage, searchQuery]);
 
   const handleCardClick = (id) => {
     navigate(`/campaigns/${id}`);
@@ -86,7 +81,7 @@ const CampaignList = () => {
           <div className="input-field-wrap campaign-search-input">
             <input
               type="text"
-              placeholder="Tìm kiếm chương trình gây quỹ theo tên hoặc nội dung..."
+              placeholder="Tìm kiếm chương trình gây quỹ theo tên chiến dịch..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -101,24 +96,33 @@ const CampaignList = () => {
       {/* Campaign Grid */}
       {loading ? (
         <Loading type="skeleton" rows={4} />
-      ) : paginatedCampaigns.length === 0 ? (
+      ) : error ? (
+        <EmptyState
+          title="Đã xảy ra lỗi khi tải dữ liệu"
+          description={error}
+          actionLabel="Thử lại"
+          onAction={() => fetchCampaigns(currentPage, searchQuery)}
+        />
+      ) : campaigns.length === 0 ? (
         <EmptyState
           title="Không tìm thấy bài tài trợ phù hợp"
-          description="Hãy thử thay đổi từ khóa tìm kiếm của bạn."
-          actionLabel="Xem tất cả chương trình"
-          onAction={() => {
+          description={searchQuery ? `Không có chiến dịch nào chứa từ khóa "${searchQuery}".` : 'Hiện tại chưa có chiến dịch gây quỹ nào đang công khai.'}
+          actionLabel={searchQuery ? 'Xem tất cả chương trình' : undefined}
+          onAction={searchQuery ? () => {
             setSearchQuery('');
             setCurrentPage(1);
-          }}
+          } : undefined}
         />
       ) : (
         <>
           <div className="campaign-grid">
-            {paginatedCampaigns.map((camp) => {
-              const target = camp.muctieu || 0;
-              const raised = camp.tongtienDaNhan || 0;
-              const percent = target > 0 ? (raised / target) * 100 : 0;
-              const daysLeft = daysRemaining(camp.ngaykethuc);
+            {campaigns.map((camp) => {
+              const target = camp.mucTieu || 0;
+              const raised = camp.tongTienDaNhan || 0;
+              const percent = camp.phanTramHoanThanh !== undefined ? camp.phanTramHoanThanh : (target > 0 ? (raised / target) * 100 : 0);
+              const daysLeft = daysRemaining(camp.ngayKetThuc);
+              const statusKey = camp.trangThai || camp.trangthai;
+              const isEnded = statusKey === 'KETTHUC' || statusKey === 'KetThuc';
 
               return (
                 <Card
@@ -129,20 +133,26 @@ const CampaignList = () => {
                 >
                   <div className="campaign-card-thumb-wrap">
                     <img
-                      src={camp.anhbia || 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600'}
-                      alt={camp.tieude}
+                      src={camp.anhBia || 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600'}
+                      alt={camp.tieuDe}
                       className="campaign-card-thumb"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600';
+                      }}
                     />
                     <div className="campaign-card-badge">
-                      <span className={`badge ${camp.trangthai === 'DangChay' ? 'badge--success' : 'badge--primary'}`}>
-                        {CAMPAIGN_STATUS_LABEL[camp.trangthai] || camp.trangthai}
+                      <span className={`badge ${!isEnded ? 'badge--success' : 'badge--primary'}`}>
+                        {CAMPAIGN_STATUS_LABEL[statusKey] || (isEnded ? 'Kết thúc' : 'Đang vận động')}
                       </span>
                     </div>
                   </div>
 
                   <div className="campaign-card-content">
-                    <h3 className="campaign-card-title">{camp.tieude}</h3>
-                    <p className="campaign-card-desc">{camp.noidung}</p>
+                    <h3 className="campaign-card-title">{camp.tieuDe}</h3>
+                    {camp.noiDung && (
+                      <p className="campaign-card-desc">{camp.noiDung}</p>
+                    )}
 
                     <ProgressBar percent={percent} showLabel={false} height={8} />
 
@@ -161,20 +171,25 @@ const CampaignList = () => {
                   <div className="campaign-card-footer">
                     <div className="campaign-card-days">
                       <FiClock size={14} />
-                      <span>{camp.trangthai === 'KetThuc' ? 'Đã kết thúc' : `Còn ${daysLeft} ngày`}</span>
+                      <span>{isEnded ? 'Đã kết thúc' : (daysLeft > 0 ? `Còn ${daysLeft} ngày` : 'Hôm nay')}</span>
                     </div>
-                    <span>{Math.min(100, percent).toFixed(0)}% đạt được</span>
+                    <span>{Math.min(100, Math.max(0, percent)).toFixed(0)}% đạt được</span>
                   </div>
                 </Card>
               );
             })}
           </div>
 
-          <Pagination
-            page={currentPage}
-            totalPages={totalPages}
-            onChange={(page) => setCurrentPage(page)}
-          />
+          {totalPages > 1 && (
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              onChange={(page) => {
+                setCurrentPage(page);
+                window.scrollTo({ top: 200, behavior: 'smooth' });
+              }}
+            />
+          )}
         </>
       )}
     </div>

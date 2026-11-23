@@ -33,6 +33,7 @@ const StudentList = () => {
   const [students, setStudents] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Bộ lọc tìm kiếm & Combobox
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,6 +58,9 @@ const StudentList = () => {
         }
       } catch (err) {
         console.error('Lỗi khi tải dữ liệu học sinh:', err);
+        if (isMounted) {
+          setError(err?.message || 'Không thể tải danh sách học sinh từ máy chủ');
+        }
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -362,6 +366,13 @@ const StudentList = () => {
         <div className="student-loading-wrap">
           <Loading type="spinner" message="Đang tải danh sách học sinh từ nhà trường..." />
         </div>
+      ) : error ? (
+        <EmptyState
+          title="Đã xảy ra lỗi khi tải dữ liệu học sinh"
+          description={error}
+          actionLabel="Tải lại trang"
+          onAction={() => window.location.reload()}
+        />
       ) : filteredStudents.length === 0 ? (
         <EmptyState
           title="Không tìm thấy học sinh nào phù hợp"

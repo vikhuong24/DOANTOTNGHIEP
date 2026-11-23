@@ -19,7 +19,14 @@ const Input = ({
   ...props
 }) => {
   const [showPassword, setShowPassword] = useState(false);
-  const inputType = type === 'password' && showPassword ? 'text' : type;
+  const isPasswordField = type === 'password';
+  const inputType = isPasswordField && showPassword ? 'text' : type;
+
+  const handleTogglePassword = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowPassword((prev) => !prev);
+  };
 
   return (
     <div className={`input-wrap ${error ? 'input-wrap--error' : ''} ${className}`}>
@@ -51,18 +58,19 @@ const Input = ({
             onChange={onChange}
             placeholder={placeholder}
             disabled={disabled}
-            className="input-field"
+            className={`input-field ${isPasswordField ? 'input-field--password' : ''}`}
             {...props}
           />
         )}
-        {type === 'password' && (
+        {isPasswordField && (
           <button
             type="button"
             className="input-eye"
-            onClick={() => setShowPassword((p) => !p)}
+            onClick={handleTogglePassword}
             tabIndex={-1}
+            aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
           >
-            {showPassword ? <FiEyeOff /> : <FiEye />}
+            {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
           </button>
         )}
       </div>

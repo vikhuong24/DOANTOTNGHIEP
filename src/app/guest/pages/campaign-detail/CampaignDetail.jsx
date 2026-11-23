@@ -1,7 +1,8 @@
 // CampaignDetail: Chi tiết bài tài trợ, danh sách nhà hảo tâm, minh chứng và nút tài trợ/đề xuất
+// Kết nối trực tiếp API Backend Spring Boot: GET /guest/campaigns/{id}
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FiCalendar, FiUser, FiCheckCircle, FiClock, FiHeart, FiFileText } from 'react-icons/fi';
+import { FiCalendar, FiUser, FiCheckCircle, FiClock, FiHeart, FiFileText, FiAward } from 'react-icons/fi';
 import Button from '../../../../components/Button/Button';
 import ProgressBar from '../../../../components/ProgressBar/ProgressBar';
 import Loading from '../../../../components/Loading/Loading';
@@ -9,7 +10,6 @@ import EmptyState from '../../../../components/EmptyState/EmptyState';
 import Lightbox from '../../../../components/Lightbox/Lightbox';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { getCampaignById } from '../../../../services/campaignService';
-import { getAllDonations } from '../../../../services/donationService';
 import { getAllEvidences } from '../../../../services/evidenceService';
 import { formatCurrency } from '../../../../utils/formatCurrency';
 import { formatDate, daysRemaining, formatRelativeTime } from '../../../../utils/formatDate';
@@ -22,9 +22,9 @@ const CampaignDetail = () => {
   const { isAuthenticated } = useAuth();
 
   const [campaign, setCampaign] = useState(null);
-  const [donations, setDonations] = useState([]);
   const [evidences, setEvidences] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Gallery & Lightbox
   const [activeImage, setActiveImage] = useState('');
@@ -35,33 +35,48 @@ const CampaignDetail = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [campRes, donsRes, evisRes] = await Promise.all([
-          getCampaignById(id),
-          getAllDonations({ maBaiTaiTro: id }),
-          getAllEvidences({ mabaitaitro: id }),
-        ]);
+        setError(null);
+
+        // Lấy chi tiết chiến dịch từ Backend (đã kèm sẵn danh sách nhà hảo tâm danhSachNhaHaoTam)
+        const campRes = await getCampaignById(id);
         setCampaign(campRes);
-        setActiveImage(campRes.anhbia || '');
-        setDonations(donsRes.data || []);
-        setEvidences(evisRes.data || []);
+        setActiveImage(campRes?.anhBia || '');
+
+        // Lấy thêm minh chứng tài liệu giải ngân nếu có
+        try {
+          const evisRes = await getAllEvidences({ mabaitaitro: id });
+          setEvidences(evisRes.data || []);
+        } catch {
+          setEvidences([]);
+        }
       } catch (err) {
         console.error('Lỗi tải chi tiết bài tài trợ:', err);
+        setError(err?.message || 'Không tìm thấy bài kêu gọi tài trợ');
+        setCampaign(null);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+
+    if (id) {
+      fetchData();
+    }
   }, [id]);
 
-  const targetAmount = campaign?.muctieu || 0;
-  const totalRaised = campaign?.tongtienDaNhan || 0;
-  const progressPercent = targetAmount > 0 ? (totalRaised / targetAmount) * 100 : 0;
-  const daysLeft = campaign ? daysRemaining(campaign.ngaykethuc) : 0;
+  const targetAmount = campaign?.mucTieu || 0;
+  const totalRaised = campaign?.tongTienDaNhan || 0;
+  const progressPercent = campaign?.phanTramHoanThanh !== undefined
+    ? campaign.phanTramHoanThanh
+    : (targetAmount > 0 ? (totalRaised / targetAmount) * 100 : 0);
+  const daysLeft = campaign ? daysRemaining(campaign.ngayKetThuc) : 0;
+  const statusKey = campaign?.trangThai || campaign?.trangthai;
+  const isEnded = statusKey === 'KETTHUC' || statusKey === 'KetThuc';
+  const donorsList = campaign?.danhSachNhaHaoTam || [];
 
   // Xử lý nút Đăng ký tài trợ
   const handleRegisterSponsor = () => {
     if (!isAuthenticated) {
-      navigate('/donor/login', { state: { redirectTo: `/donor/register-sponsor?campaignId=${id}` } });
+      navigate('/login', { state: { from: { pathname: `/donor/register-sponsor?campaignId=${id}` } } });
     } else {
       navigate(`/donor/register-sponsor?campaignId=${id}`);
     }
@@ -70,7 +85,7 @@ const CampaignDetail = () => {
   // Xử lý nút Đề xuất tài trợ
   const handleProposeSponsor = () => {
     if (!isAuthenticated) {
-      navigate('/donor/login', { state: { redirectTo: `/donor/propose-sponsor?campaignId=${id}` } });
+      navigate('/login', { state: { from: { pathname: `/donor/propose-sponsor?campaignId=${id}` } } });
     } else {
       navigate(`/donor/propose-sponsor?campaignId=${id}`);
     }
@@ -79,9 +94,10 @@ const CampaignDetail = () => {
   // Gallery list (ảnh bìa + ảnh minh chứng)
   const allImages = useMemo(() => {
     const imgs = [];
-    if (campaign?.anhbia) imgs.push(campaign.anhbia);
+    if (campaign?.anhBia) imgs.push(campaign.anhBia);
     evidences.forEach((e) => {
-      if (e.duongdantep && !imgs.includes(e.duongdantep)) imgs.push(e.duongdantep);
+      const src = e.duongdantep || e.duongDanTep;
+      if (src && !imgs.includes(src)) imgs.push(src);
     });
     return imgs;
   }, [campaign, evidences]);
@@ -94,12 +110,12 @@ const CampaignDetail = () => {
     );
   }
 
-  if (!campaign) {
+  if (error || !campaign) {
     return (
       <div className="container" style={{ padding: '3rem 0' }}>
         <EmptyState
           title="Không tìm thấy bài kêu gọi tài trợ"
-          description="Chương trình này có thể đã bị xóa hoặc không còn tồn tại."
+          description={error || "Chương trình này có thể đã bị xóa hoặc không còn tồn tại trên hệ thống."}
           actionLabel="Quay lại danh sách"
           onAction={() => navigate('/campaigns')}
         />
@@ -114,19 +130,25 @@ const CampaignDetail = () => {
         <div className="campaign-detail-main">
           {/* Header Title */}
           <div className="campaign-title-wrap">
-            <span className={`badge ${campaign.trangthai === 'DangChay' ? 'badge--success' : 'badge--primary'}`}>
-              {CAMPAIGN_STATUS_LABEL[campaign.trangthai] || campaign.trangthai}
+            <span className={`badge ${!isEnded ? 'badge--success' : 'badge--primary'}`}>
+              {CAMPAIGN_STATUS_LABEL[statusKey] || (isEnded ? 'Kết thúc' : 'Đang vận động')}
             </span>
-            <h1 style={{ marginTop: '0.5rem' }}>{campaign.tieude}</h1>
+            <h1 style={{ marginTop: '0.5rem' }}>{campaign.tieuDe}</h1>
             <div className="campaign-meta-bar">
               <div className="campaign-meta-item">
                 <FiCalendar />
-                <span>Từ {formatDate(campaign.ngaybatdau)} đến {formatDate(campaign.ngaykethuc)}</span>
+                <span>Từ {formatDate(campaign.ngayBatDau)} đến {formatDate(campaign.ngayKetThuc)}</span>
               </div>
               <div className="campaign-meta-item">
                 <FiUser />
-                <span>Cán bộ phụ trách: Lê Minh Cường (CBQL)</span>
+                <span>Cán bộ phụ trách: <strong>{campaign.tenCanBo || campaign.tenCanBoPhuTrach || 'Cán bộ gây quỹ trường'}</strong></span>
               </div>
+              {campaign.tenHieuTruongDuyet && (
+                <div className="campaign-meta-item">
+                  <FiAward />
+                  <span>Phê duyệt bởi: <strong>{campaign.tenHieuTruongDuyet}</strong></span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -141,7 +163,15 @@ const CampaignDetail = () => {
             style={{ cursor: 'pointer' }}
             title="Nhấp để phóng to ảnh"
           >
-            <img src={activeImage} alt={campaign.tieude} className="campaign-main-image" />
+            <img
+              src={activeImage || 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600'}
+              alt={campaign.tieuDe}
+              className="campaign-main-image"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600';
+              }}
+            />
           </div>
 
           {/* Thumbnail Gallery */}
@@ -162,7 +192,7 @@ const CampaignDetail = () => {
           {/* Detailed Content */}
           <div className="campaign-content-box">
             <h3>Nội dung chương trình tài trợ</h3>
-            <p style={{ whiteSpace: 'pre-line' }}>{campaign.noidung}</p>
+            <p style={{ whiteSpace: 'pre-line' }}>{campaign.noiDung}</p>
           </div>
 
           {/* Minh chứng nếu có */}
@@ -173,36 +203,39 @@ const CampaignDetail = () => {
                 Hóa đơn tài chính, chứng từ bàn giao và hình ảnh hoạt động trao tặng thực tế tại trường.
               </p>
               <div className="evidence-grid">
-                {evidences.map((evi) => (
-                  <div
-                    key={evi.maMinhchung}
-                    className="evidence-item"
-                    onClick={() => {
-                      const imgIdx = allImages.indexOf(evi.duongdantep);
-                      setLightboxIndex(imgIdx >= 0 ? imgIdx : 0);
-                      setLightboxOpen(true);
-                    }}
-                  >
-                    <img src={evi.duongdantep} alt={evi.mota} className="evidence-thumb" />
-                    <div className="evidence-caption">
-                      <strong>[{evi.loaitailieu}]</strong> {evi.mota}
+                {evidences.map((evi) => {
+                  const imgSrc = evi.duongdantep || evi.duongDanTep;
+                  return (
+                    <div
+                      key={evi.maMinhchung || evi.maMinhChung}
+                      className="evidence-item"
+                      onClick={() => {
+                        const imgIdx = allImages.indexOf(imgSrc);
+                        setLightboxIndex(imgIdx >= 0 ? imgIdx : 0);
+                        setLightboxOpen(true);
+                      }}
+                    >
+                      <img src={imgSrc} alt={evi.mota || evi.moTa} className="evidence-thumb" />
+                      <div className="evidence-caption">
+                        <strong>[{evi.loaitailieu || evi.loaiTaiLieu}]</strong> {evi.mota || evi.moTa}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {/* Recent Donors */}
+          {/* Recent Donors - Dữ liệu thật từ Backend */}
           <div className="recent-donors-card">
-            <h3>Nhà hảo tâm đã đồng hành ({donations.length})</h3>
+            <h3>Nhà hảo tâm đã đồng hành ({donorsList.length})</h3>
             <div style={{ marginTop: '1rem' }}>
-              {donations.length === 0 ? (
+              {donorsList.length === 0 ? (
                 <p style={{ color: '#888', fontStyle: 'italic' }}>
-                  Chưa có lượt tài trợ nào được xác nhận. Hãy là người đầu tiên ủng hộ!
+                  Chưa có lượt tài trợ nào được ghi nhận. Hãy là người đầu tiên ủng hộ chương trình này!
                 </p>
               ) : (
-                donations.map((don) => (
+                donorsList.map((don) => (
                   <div key={don.maTaiTro} className="donor-item">
                     <div className="donor-info">
                       <div className="donor-avatar">
@@ -210,10 +243,13 @@ const CampaignDetail = () => {
                       </div>
                       <div>
                         <div className="donor-name">{don.tenHienThi || 'Nhà hảo tâm ẩn danh'}</div>
-                        <div className="donor-time">{formatRelativeTime(don.ngaygui || don.ngayGui)}</div>
+                        <div className="donor-time">
+                          {don.ngayNhan ? formatDate(don.ngayNhan) : 'Mới đây'}
+                          {don.ghiChu && ` • ${don.ghiChu}`}
+                        </div>
                       </div>
                     </div>
-                    <div className="donor-amount">{formatCurrency(don.soTienTT ?? don.soTienDK ?? don.amount ?? 0)}</div>
+                    <div className="donor-amount">{formatCurrency(don.soTienTt || 0)}</div>
                   </div>
                 ))
               )}
@@ -238,11 +274,11 @@ const CampaignDetail = () => {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: '#666' }}>
               <div>
-                <strong>{donations.length}</strong> lượt tài trợ
+                <strong>{donorsList.length}</strong> lượt tài trợ
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent)', fontWeight: 600 }}>
                 <FiClock />
-                <span>{campaign.trangthai === 'KetThuc' ? 'Đã hoàn tất' : `Còn ${daysLeft} ngày`}</span>
+                <span>{isEnded ? 'Đã hoàn tất' : (daysLeft > 0 ? `Còn ${daysLeft} ngày` : 'Hôm nay')}</span>
               </div>
             </div>
 
@@ -253,7 +289,7 @@ const CampaignDetail = () => {
                 size="lg"
                 fullWidth
                 onClick={handleRegisterSponsor}
-                disabled={campaign.trangthai === 'KetThuc'}
+                disabled={isEnded}
               >
                 <FiHeart /> Đăng ký tài trợ ngay
               </Button>
@@ -263,7 +299,7 @@ const CampaignDetail = () => {
                 size="md"
                 fullWidth
                 onClick={handleProposeSponsor}
-                disabled={campaign.trangthai === 'KetThuc'}
+                disabled={isEnded}
               >
                 <FiFileText /> Đề xuất tài trợ dự án riêng
               </Button>

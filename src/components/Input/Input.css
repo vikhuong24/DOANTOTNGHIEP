@@ -19,12 +19,45 @@
 .input-field--textarea { resize: vertical; min-height: 100px; }
 .input-wrap--error .input-field { border-color: var(--danger); }
 .input-wrap--error .input-field:focus { box-shadow: 0 0 0 3px rgba(229,57,53,0.12); }
+
+/* Padding tránh đè chữ lên con mắt */
+.input-field--password,
+.input-field[type='password'] {
+  padding-right: 2.75rem !important;
+}
+
+/* Ẩn triệt để nút con mắt native mặc định của trình duyệt Edge/IE/Chrome để chỉ hiển thị đúng 1 con mắt của component */
+input::-ms-reveal,
+input::-ms-clear,
+.input-field::-ms-reveal,
+.input-field::-ms-clear {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+}
+
 .input-eye {
-  position: absolute; right: 0.75rem;
-  background: none; border: none; cursor: pointer;
-  color: #888; display: flex; align-items: center;
-  padding: 0;
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.2s;
+  z-index: 5;
+  pointer-events: auto;
 }
 .input-eye:hover { color: var(--text); }
+.input-eye svg {
+  pointer-events: none;
+}
 .input-error { font-size: 0.8125rem; color: var(--danger); margin: 0; }
 .input-help { font-size: 0.8125rem; color: #888; margin: 0; }

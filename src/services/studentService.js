@@ -4,60 +4,64 @@ import api, { unwrap, unwrapList } from './api';
 /**
  * Chuẩn hóa đối tượng học sinh
  */
-const normalizeStudent = (s) => {
+export const normalizeStudent = (s) => {
   if (!s) return null;
-  const id = s.mahocsinh || s.maHocSinh || s.id;
+  const id = s.maHocSinh || s.mahocsinh || s.id;
+  const hoTen = s.hoTen || s.hoten || s.name || '';
+  const lop = s.lop || '';
+  const gioiTinh = s.gioiTinh || s.gioitinh || 'NAM';
+  const loaiHoTro = s.loaiHoTro || s.loaihotro || s.hoancanh || '';
+  const moTa = s.moTa || s.mota || s.hoancanh || '';
+
   return {
     ...s,
     id,
     mahocsinh: id,
     maHocSinh: id,
-    hoten: s.hoten || s.hoTen || s.name || '',
-    hoTen: s.hoten || s.hoTen || s.name || '',
-    lop: s.lop || '',
-    ngaysinh: s.ngaysinh || s.ngaySinh || '',
-    ngaySinh: s.ngaysinh || s.ngaySinh || '',
-    gioitinh: s.gioitinh || s.gioiTinh || 'Nam',
-    gioiTinh: s.gioitinh || s.gioiTinh || 'Nam',
-    loaihotro: s.loaihotro || s.loaiHoTro || '',
-    loaiHoTro: s.loaihotro || s.loaiHoTro || '',
-    mota: s.mota || s.moTa || s.hoancanh || '',
-    moTa: s.mota || s.moTa || s.hoancanh || '',
-    hoancanh: s.mota || s.moTa || s.hoancanh || '',
-    maphuhuynh: s.maphuhuynh || s.maPhuHuynh,
-    maPhuHuynh: s.maphuhuynh || s.maPhuHuynh,
+    hoten: hoTen,
+    hoTen: hoTen,
+    lop,
+    ngaysinh: s.ngaySinh || s.ngaysinh || '',
+    ngaySinh: s.ngaySinh || s.ngaysinh || '',
+    gioitinh: gioiTinh,
+    gioiTinh: gioiTinh,
+    loaihotro: loaiHoTro,
+    loaiHoTro: loaiHoTro,
+    mota: moTa,
+    moTa: moTa,
+    hoancanh: moTa,
+    maphuhuynh: s.maPhuHuynh || s.maphuhuynh,
+    maPhuHuynh: s.maPhuHuynh || s.maphuhuynh,
   };
 };
 
 /**
- * Lấy danh sách học sinh công khai cho khách vãng lai và nhà hảo tâm (/guest/students)
+ * Lấy danh sách học sinh công khai cho khách vãng lai và nhà hảo tâm
+ * Endpoint: GET /guest/students
+ * @param {object} params - { page, size }
  */
 export const getGuestStudents = async (params = {}) => {
   try {
     const res = await api.get('/guest/students', {
       params: {
         page: params.page !== undefined ? params.page : 0,
-        size: params.size || 100,
+        size: params.size || 20,
       },
     });
-    const list = unwrapList(res);
-    let enriched = list.map(normalizeStudent);
 
-    if (params.search) {
-      const q = params.search.toLowerCase();
-      enriched = enriched.filter(
-        (st) =>
-          (st.hoten && st.hoten.toLowerCase().includes(q)) ||
-          (st.lop && st.lop.toLowerCase().includes(q)) ||
-          (st.mota && st.mota.toLowerCase().includes(q)) ||
-          (st.loaihotro && st.loaihotro.toLowerCase().includes(q))
-      );
-    }
-    if (params.lop && params.lop !== 'ALL') {
-      enriched = enriched.filter((st) => st.lop === params.lop);
-    }
+    const pageData = unwrap(res);
+    const rawList = unwrapList(res);
+    const enriched = rawList.map(normalizeStudent);
 
-    return { data: enriched, items: enriched, total: enriched.length };
+    return {
+      data: enriched,
+      items: enriched,
+      total: pageData?.totalElements ?? enriched.length,
+      totalElements: pageData?.totalElements ?? enriched.length,
+      totalPages: pageData?.totalPages ?? 1,
+      currentPage: pageData?.currentPage ?? 0,
+      isLast: pageData?.isLast ?? pageData?.last ?? true,
+    };
   } catch (err) {
     console.error('Lỗi khi lấy danh sách học sinh guest:', err);
     throw err;
@@ -65,7 +69,7 @@ export const getGuestStudents = async (params = {}) => {
 };
 
 /**
- * Lấy danh sách học sinh (tự động phân quyền: cán bộ quản lý / admin gọi /fundraiser/students, khách vãng lai / nhà tài trợ gọi /guest/students)
+ * Lấy danh sách học sinh (tự động phân quyền: cán bộ quản lý / admin gọi /fundraiser/students, khách vãng lai gọi /guest/students)
  */
 export const getAllStudents = async (params = {}) => {
   try {
@@ -88,25 +92,18 @@ export const getAllStudents = async (params = {}) => {
         size: params.size || 100,
       },
     });
+
+    const pageData = unwrap(res);
     const list = unwrapList(res);
     let enriched = list.map(normalizeStudent);
 
-    // Filter frontend nếu backend trả về toàn bộ
-    if (params.search) {
-      const q = params.search.toLowerCase();
-      enriched = enriched.filter(
-        (st) =>
-          (st.hoten && st.hoten.toLowerCase().includes(q)) ||
-          (st.lop && st.lop.toLowerCase().includes(q)) ||
-          (st.mota && st.mota.toLowerCase().includes(q)) ||
-          (st.loaihotro && st.loaihotro.toLowerCase().includes(q))
-      );
-    }
-    if (params.lop && params.lop !== 'ALL') {
-      enriched = enriched.filter((st) => st.lop === params.lop);
-    }
-
-    return { data: enriched, items: enriched, total: enriched.length };
+    return {
+      data: enriched,
+      items: enriched,
+      total: pageData?.totalElements ?? enriched.length,
+      totalPages: pageData?.totalPages ?? 1,
+      currentPage: pageData?.currentPage ?? 0,
+    };
   } catch (err) {
     console.error('Lỗi khi lấy danh sách học sinh:', err);
     throw err;
@@ -147,16 +144,13 @@ export const getStudentSupportHistory = async (mahocsinh) => {
  */
 export const createStudent = async (data) => {
   const payload = {
-    hoten: data.hoten || data.hoTen,
-    hoTen: data.hoten || data.hoTen,
+    hoTen: data.hoTen || data.hoten,
     lop: data.lop,
-    gioitinh: data.gioitinh || data.gioiTinh,
-    gioiTinh: data.gioitinh || data.gioiTinh,
-    ngaysinh: data.ngaysinh || data.ngaySinh,
-    ngaySinh: data.ngaysinh || data.ngaySinh,
-    loaihotro: data.loaihotro || data.loaiHoTro || data.hoancanh || '',
-    mota: data.mota || data.moTa || data.hoancanh || '',
-    maphuhuynh: data.maphuhuynh || data.maPhuHuynh,
+    gioiTinh: data.gioiTinh || data.gioitinh,
+    ngaySinh: data.ngaySinh || data.ngaysinh,
+    loaiHoTro: data.loaiHoTro || data.loaihotro || data.hoancanh || '',
+    moTa: data.moTa || data.mota || data.hoancanh || '',
+    maPhuHuynh: data.maPhuHuynh || data.maphuhuynh,
   };
   const res = await api.post('/fundraiser/students', payload);
   return normalizeStudent(unwrap(res));
