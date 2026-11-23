@@ -1,5 +1,5 @@
 // Trang Đăng Nhập Duy Nhất Của Hệ Thống Gây Quỹ Trường Chuyên Biệt Nguyễn Đình Chiểu Đà Nẵng
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useNotification } from '../../../../components/Notification/Notification';
@@ -13,7 +13,7 @@ import './Login.css';
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, isAuthenticated, user: currentUser } = useAuth();
   const { addToast } = useNotification();
 
   const [formData, setFormData] = useState({
@@ -23,10 +23,30 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
+  // Nếu người dùng đã đăng nhập, tự động chuyển về trang phù hợp
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      const code = (currentUser.maVaiTro || currentUser.role || currentUser.vaiTro || '').toUpperCase();
+      if (code === 'ADMIN') {
+        navigate('/admin/user-management', { replace: true });
+      } else if (code === 'HIEUTRUONG' || code === 'HT') {
+        navigate('/principal/campaign-approval', { replace: true });
+      } else if (code === 'CANBO' || code === 'CBQL' || code === 'FUNDRAISER') {
+        navigate('/fundraiser/campaign-update', { replace: true });
+      } else if (code === 'PHUHUYNH' || code === 'PH' || code === 'PARENT') {
+        navigate('/parent/student-support-history', { replace: true });
+      } else {
+        navigate('/campaigns', { replace: true });
+      }
+    }
+  }, [isAuthenticated, currentUser, navigate]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+    if (errors[name] || errors.general) {
+      setErrors((prev) => ({ ...prev, [name]: '', general: '' }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -44,7 +64,7 @@ const Login = () => {
       setLoading(true);
       const user = await login(formData.username, formData.password);
       const roleCode = (user.maVaiTro || user.role || user.vaiTro || '').toUpperCase();
-      addToast(`Đăng nhập thành công! Chào mừng ${user.hoten || user.name}`, 'success');
+      addToast(`Đăng nhập thành công! Chào mừng ${user.hoten || user.name || user.email}`, 'success');
 
       // Nếu có redirect state trước đó từ trang người dùng muốn truy cập
       const targetFrom = location.state?.from?.pathname;
@@ -59,10 +79,12 @@ const Login = () => {
         navigate(targetFrom?.startsWith('/parent') ? targetFrom : '/parent/student-support-history', { replace: true });
       } else {
         // Mặc định là Nhà hảo tâm (NHATAITRO / NHT / DONOR)
-        navigate(targetFrom || '/campaigns', { replace: true });
+        navigate(targetFrom?.startsWith('/donor') ? targetFrom : (targetFrom || '/campaigns'), { replace: true });
       }
     } catch (err) {
-      addToast(err?.message || 'Đăng nhập không thành công, vui lòng kiểm tra lại tài khoản và mật khẩu', 'error');
+      const errorMsg = err?.message || 'Đăng nhập không thành công, vui lòng kiểm tra lại tài khoản và mật khẩu';
+      setErrors((prev) => ({ ...prev, general: errorMsg }));
+      addToast(errorMsg, 'error');
     } finally {
       setLoading(false);
     }
@@ -125,7 +147,23 @@ const Login = () => {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="auth-form-fields">
+            {errors.general && (
+              <div
+                style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#dc2626',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  fontSize: '14px',
+                }}
+              >
+                {errors.general}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="auth-form-fields" noValidate>
               <Input
                 label="Tên đăng nhập hoặc Email"
                 name="username"

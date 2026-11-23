@@ -1,42 +1,81 @@
 // AuthContext: Quản lý trạng thái xác thực toàn ứng dụng
-import { createContext, useContext, useState, useEffect } from 'react';
-import { login as loginService, logout as logoutService, getCurrentUser } from '../services/authService';
+// Đồng bộ chặt chẽ với cơ chế JWT và vai trò từ Backend Spring Boot
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import {
+  login as loginService,
+  logout as logoutService,
+  getCurrentUser,
+  getToken,
+  register as registerService,
+} from '../services/authService';
 import { ROLE_ROUTE_PREFIX } from '../utils/constants';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null); // Ví dụ: 'donor' hoặc 'NHT'
-  const [roleCode, setRoleCode] = useState(null); // 'NHT', 'PH', ...
+  const [token, setToken] = useState(null);
+  const [role, setRole] = useState(null); // Slug vai trò (donor, parent, fundraiser, principal, admin)
+  const [roleCode, setRoleCode] = useState(null); // Mã vai trò CSDL (NHATAITRO, PHUHUYNH, CANBO, HIEUTRUONG, ADMIN)
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Đặt lại toàn bộ trạng thái xác thực về rỗng
+  const resetAuthState = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    setRole(null);
+    setRoleCode(null);
+    setIsAuthenticated(false);
+  }, []);
+
   // Khôi phục session từ localStorage khi khởi động
   useEffect(() => {
+    const validToken = getToken();
     const savedUser = getCurrentUser();
-    const token = localStorage.getItem('token');
-    if (savedUser && token) {
+
+    if (validToken && savedUser) {
       setUser(savedUser);
-      const code = savedUser.maVaiTro || savedUser.role;
+      setToken(validToken);
+      const code = (savedUser.maVaiTro || savedUser.role || savedUser.vaiTro || '').toUpperCase();
       setRoleCode(code);
-      setRole(ROLE_ROUTE_PREFIX[code] || code?.toLowerCase());
+      setRole(ROLE_ROUTE_PREFIX[code] || code.toLowerCase());
       setIsAuthenticated(true);
+    } else {
+      resetAuthState();
     }
     setLoading(false);
-  }, []);
+
+    // Lắng nghe sự kiện hết hạn token từ Axios Interceptor
+    const handleAuthExpired = () => {
+      resetAuthState();
+    };
+
+    window.addEventListener('auth:expired', handleAuthExpired);
+    return () => {
+      window.removeEventListener('auth:expired', handleAuthExpired);
+    };
+  }, [resetAuthState]);
 
   /**
    * Đăng nhập với usernameOrEmail và password
    */
   const login = async (usernameOrEmail, password) => {
-    const { user: loggedUser } = await loginService(usernameOrEmail, password);
+    const { user: loggedUser, token: loggedToken } = await loginService(usernameOrEmail, password);
     setUser(loggedUser);
-    const code = loggedUser.maVaiTro || loggedUser.role;
+    setToken(loggedToken);
+    const code = (loggedUser.maVaiTro || loggedUser.role || loggedUser.vaiTro || '').toUpperCase();
     setRoleCode(code);
-    setRole(ROLE_ROUTE_PREFIX[code] || code?.toLowerCase());
+    setRole(ROLE_ROUTE_PREFIX[code] || code.toLowerCase());
     setIsAuthenticated(true);
     return loggedUser;
+  };
+
+  /**
+   * Đăng ký tài khoản Nhà hảo tâm
+   */
+  const register = async (userData) => {
+    return registerService(userData);
   };
 
   /**
@@ -44,21 +83,23 @@ export const AuthProvider = ({ children }) => {
    */
   const logout = async () => {
     await logoutService();
-    setUser(null);
-    setRole(null);
-    setRoleCode(null);
-    setIsAuthenticated(false);
+    resetAuthState();
   };
 
   /**
-   * Kiểm tra quyền truy cập theo role
-   * @param {string[]} allowedRoles
+   * Kiểm tra quyền truy cập theo vai trò
+   * @param {string[]} allowedRoles - Danh sách role cho phép (chấp nhận cả mã IN HOA hoặc slug in thường)
    * @returns {boolean}
    */
   const hasRole = (allowedRoles = []) => {
     if (!isAuthenticated) return false;
     if (!allowedRoles || allowedRoles.length === 0) return true;
-    const currentCode = (roleCode || user?.maVaiTro || user?.role || '').toUpperCase();
+
+    const currentCode = (roleCode || user?.maVaiTro || user?.role || user?.vaiTro || '').toUpperCase();
+
+    // ADMIN có quyền truy cập toàn bộ tài nguyên theo cấu hình phân quyền SecurityConfig của Backend
+    if (currentCode === 'ADMIN') return true;
+
     const currentSlug = (role || ROLE_ROUTE_PREFIX[currentCode] || '').toLowerCase();
 
     return allowedRoles.some((r) => {
@@ -76,11 +117,13 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
+    token,
     role,
     roleCode,
     isAuthenticated,
     loading,
     login,
+    register,
     logout,
     hasRole,
   };

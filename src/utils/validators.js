@@ -1,37 +1,43 @@
-// Các hàm validate dữ liệu đầu vào
+// Các hàm validate dữ liệu đầu vào chuẩn hóa theo quy tắc Backend Spring Boot
+// Trường Phổ Thông Chuyên Biệt Nguyễn Đình Chiểu Đà Nẵng
 
 /**
- * Validate email
+ * Validate email theo đúng chuẩn regex Backend (@Pattern(regexp = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,6}$"))
  * @param {string} email
  * @returns {string|null} Lỗi hoặc null nếu hợp lệ
  */
 export const validateEmail = (email) => {
-  if (!email) return 'Email không được để trống';
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!re.test(email)) return 'Email không hợp lệ';
+  if (!email || !String(email).trim()) return 'Email không được để trống';
+  const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+  if (!re.test(String(email).trim())) {
+    return 'Email không đúng định dạng (Ví dụ: example@domain.com)';
+  }
   return null;
 };
 
 /**
- * Validate mật khẩu
+ * Validate mật khẩu theo yêu cầu Backend: từ 6 đến 50 ký tự
  * @param {string} password
  * @returns {string|null}
  */
 export const validatePassword = (password) => {
   if (!password) return 'Mật khẩu không được để trống';
-  if (password.length < 6) return 'Mật khẩu phải có ít nhất 6 ký tự';
+  if (password.length < 6) return 'Mật khẩu phải từ 6 đến 50 ký tự';
+  if (password.length > 50) return 'Mật khẩu không được vượt quá 50 ký tự';
   return null;
 };
 
 /**
- * Validate số điện thoại VN
+ * Validate số điện thoại theo Backend: bắt đầu bằng 0 và có đúng 10 chữ số (@Pattern(regexp = "^0\\d{9}$"))
  * @param {string} phone
  * @returns {string|null}
  */
 export const validatePhone = (phone) => {
-  if (!phone) return 'Số điện thoại không được để trống';
-  const re = /^(0|\+84)[3-9]\d{8}$/;
-  if (!re.test(phone)) return 'Số điện thoại không hợp lệ';
+  if (!phone || !String(phone).trim()) return 'Số điện thoại không được để trống';
+  const re = /^0\d{9}$/;
+  if (!re.test(String(phone).trim())) {
+    return 'Số điện thoại không hợp lệ. Phải bắt đầu bằng số 0 và bao gồm đúng 10 chữ số';
+  }
   return null;
 };
 
@@ -42,8 +48,9 @@ export const validatePhone = (phone) => {
  * @returns {string|null}
  */
 export const validateRequired = (value, fieldName = 'Trường này') => {
-  if (!value || (typeof value === 'string' && !value.trim()))
+  if (!value || (typeof value === 'string' && !value.trim())) {
     return `${fieldName} không được để trống`;
+  }
   return null;
 };
 

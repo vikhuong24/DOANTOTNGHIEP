@@ -1,5 +1,7 @@
 // Axios instance với base URL và interceptor token chuẩn cho Backend Spring Boot
+// Tích hợp kiểm tra hạn JWT và quản lý Bearer Token
 import axios from 'axios';
+import { isTokenExpired } from '../utils/jwt';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api',
@@ -9,11 +11,29 @@ const api = axios.create({
   },
 });
 
-// Request interceptor: gắn Bearer JWT token vào header
+// Request interceptor: tự động đính kèm Bearer JWT token vào header nếu token còn hợp lệ
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
+      // Kiểm tra token đã hết hạn chưa trước khi gửi request
+      if (isTokenExpired(token)) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.dispatchEvent(new CustomEvent('auth:expired'));
+
+        // Chuyển hướng sang trang login nếu đang ở trang yêu cầu xác thực
+        if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+          window.location.href = '/login';
+        }
+
+        return Promise.reject({
+          status: 401,
+          code: 1004,
+          message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+        });
+      }
+
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -35,27 +55,43 @@ api.interceptors.response.use(
     if (status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      window.dispatchEvent(new CustomEvent('auth:expired'));
+
       // Tránh lặp vô hạn nếu đang ở trang login
-      if (!window.location.pathname.includes('/login')) {
+      if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
         window.location.href = '/login';
       }
     }
 
     // Trích xuất thông điệp lỗi rõ ràng từ ApiResponse của Backend Spring Boot
-    const message =
-      errorData?.message ||
-      errorData?.error ||
-      (status === 403 ? 'Bạn không có quyền thực hiện thao tác này' : null) ||
-      (status === 404 ? 'Không tìm thấy dữ liệu yêu cầu' : null) ||
-      (status >= 500 ? 'Máy chủ gặp sự cố, vui lòng thử lại sau' : null) ||
-      error.message ||
-      'Đã xảy ra lỗi trong quá trình xử lý';
+    let message = errorData?.message || errorData?.error;
+
+    // Nếu Backend trả về lỗi validation trường dữ liệu (MethodArgumentNotValidException)
+    if (!message && errorData?.result && typeof errorData.result === 'object') {
+      const fieldErrors = Object.values(errorData.result);
+      if (fieldErrors.length > 0) {
+        message = fieldErrors[0];
+      }
+    }
+
+    if (!message) {
+      if (status === 403) {
+        message = 'Bạn không có quyền thực hiện thao tác này';
+      } else if (status === 404) {
+        message = 'Không tìm thấy dữ liệu yêu cầu';
+      } else if (status >= 500) {
+        message = 'Máy chủ gặp sự cố, vui lòng thử lại sau';
+      } else {
+        message = error.message || 'Đã xảy ra lỗi trong quá trình xử lý';
+      }
+    }
 
     return Promise.reject({
       status,
       code: errorData?.code,
       message,
       data: errorData,
+      errors: (errorData?.result && typeof errorData.result === 'object') ? errorData.result : null,
     });
   }
 );

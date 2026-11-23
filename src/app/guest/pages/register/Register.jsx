@@ -1,10 +1,10 @@
 // Register: Đăng ký tài khoản Nhà hảo tâm đồng hành cùng trường Nguyễn Đình Chiểu
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Input from '../../../../components/Input/Input';
 import Button from '../../../../components/Button/Button';
 import { useNotification } from '../../../../components/Notification/Notification';
-import { register as registerService } from '../../../../services/authService';
+import { useAuth } from '../../../../contexts/AuthContext';
 import { validateEmail, validatePhone, validatePassword, validateRequired } from '../../../../utils/validators';
 import { FiHeart, FiCheckCircle, FiShield, FiUserPlus, FiArrowRight } from 'react-icons/fi';
 import './Register.css';
@@ -12,6 +12,7 @@ import './Register.css';
 const Register = () => {
   const navigate = useNavigate();
   const { addToast } = useNotification();
+  const { register: registerAction, isAuthenticated } = useAuth();
 
   const [formData, setFormData] = useState({
     hoten: '',
@@ -25,6 +26,13 @@ const Register = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
+  // Nếu đã đăng nhập thì chuyển hướng sang trang khám phá chiến dịch
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/campaigns', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -32,7 +40,7 @@ const Register = () => {
       [name]: type === 'checkbox' ? checked : value,
     }));
     if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: null }));
+      setErrors((prev) => ({ ...prev, [name]: null, general: null }));
     }
   };
 
@@ -71,17 +79,35 @@ const Register = () => {
 
     setLoading(true);
     try {
-      await registerService({
+      const res = await registerAction({
         hoten: formData.hoten,
         email: formData.email,
         sdt: formData.sdt,
         matkhau: formData.matkhau,
       });
 
-      addToast('Đăng ký tài khoản Nhà hảo tâm thành công! Mời bạn đăng nhập để tiếp tục.', 'success');
+      addToast(res?.message || 'Đăng ký tài khoản Nhà hảo tâm thành công! Mời bạn đăng nhập để tiếp tục.', 'success');
       navigate('/login');
     } catch (err) {
-      addToast(err?.message || 'Đăng ký thất bại, vui lòng thử lại', 'error');
+      const newErrors = {};
+
+      // Xử lý lỗi theo trường từ Backend trả về
+      if (err?.errors && typeof err.errors === 'object') {
+        if (err.errors.hoTen) newErrors.hoten = err.errors.hoTen;
+        if (err.errors.email) newErrors.email = err.errors.email;
+        if (err.errors.sdt) newErrors.sdt = err.errors.sdt;
+        if (err.errors.matKhau) newErrors.matkhau = err.errors.matKhau;
+      }
+
+      // Xử lý trường hợp email đã tồn tại (ErrorCode 1002)
+      if (err?.code === 1002 || (err?.message && err.message.toLowerCase().includes('email'))) {
+        newErrors.email = err.message || 'Email này đã được đăng ký trong hệ thống!';
+      }
+
+      const displayMessage = err?.message || 'Đăng ký thất bại, vui lòng kiểm tra lại thông tin';
+      newErrors.general = displayMessage;
+      setErrors((prev) => ({ ...prev, ...newErrors }));
+      addToast(displayMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -140,6 +166,22 @@ const Register = () => {
                 Điền thông tin để bắt đầu hành trình thiện nguyện cùng nhà trường
               </p>
             </div>
+
+            {errors.general && (
+              <div
+                style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#dc2626',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  fontSize: '14px',
+                }}
+              >
+                {errors.general}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="register-form-body" noValidate>
               <Input

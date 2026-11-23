@@ -125,10 +125,10 @@ const Header = () => {
 
   const getHomePath = () => {
     if (!isAuthenticated) return '/campaigns';
-    if (role === 'donor' || roleCode === 'NHT') return '/campaigns';
-    if (role === 'parent' || roleCode === 'PH') return '/parent/student-support-history';
-    if (role === 'fundraiser' || roleCode === 'CBQL') return '/fundraiser/campaign-update';
-    if (role === 'principal' || roleCode === 'HT') return '/principal/campaign-approval';
+    if (role === 'donor' || roleCode === 'NHT' || roleCode === 'NHATAITRO') return '/campaigns';
+    if (role === 'parent' || roleCode === 'PH' || roleCode === 'PHUHUYNH') return '/parent/student-support-history';
+    if (role === 'fundraiser' || roleCode === 'CBQL' || roleCode === 'CANBO') return '/fundraiser/campaign-update';
+    if (role === 'principal' || roleCode === 'HT' || roleCode === 'HIEUTRUONG') return '/principal/campaign-approval';
     if (role === 'admin' || roleCode === 'ADMIN') return '/admin/user-management';
     return '/campaigns';
   };
@@ -187,7 +187,7 @@ const Header = () => {
               {dropdownOpen && (
                 <div className="header-dropdown">
                   {/* Menu riêng cho Nhà hảo tâm */}
-                  {(role === 'donor' || roleCode === 'NHT') ? (
+                  {(role === 'donor' || roleCode === 'NHT' || roleCode === 'NHATAITRO') ? (
                     <>
                       <NavLink
                         to="/donor/profile"
@@ -218,7 +218,7 @@ const Header = () => {
                         <FiBarChart2 /> Tiến trình dự án đã ủng hộ
                       </NavLink>
                     </>
-                  ) : (role === 'parent' || roleCode === 'PH') ? (
+                  ) : (role === 'parent' || roleCode === 'PH' || roleCode === 'PHUHUYNH') ? (
                     <>
                       <NavLink
                         to="/parent/student-support-history"
@@ -242,7 +242,7 @@ const Header = () => {
                         <FiMessageSquare /> Phản hồi sai lệch
                       </NavLink>
                     </>
-                  ) : (role === 'fundraiser' || roleCode === 'CBQL') ? (
+                  ) : (role === 'fundraiser' || roleCode === 'CBQL' || roleCode === 'CANBO') ? (
                     <>
                       <NavLink
                         to="/fundraiser/campaign-update"
@@ -266,7 +266,7 @@ const Header = () => {
                         <FiFileText /> Duyệt đề xuất NHT
                       </NavLink>
                     </>
-                  ) : (role === 'principal' || roleCode === 'HT') ? (
+                  ) : (role === 'principal' || roleCode === 'HT' || roleCode === 'HIEUTRUONG') ? (
                     <>
                       <NavLink
                         to="/principal/campaign-approval"
