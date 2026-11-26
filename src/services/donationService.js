@@ -31,8 +31,8 @@ export const normalizeDonation = (d) => {
     trangthai: status,
     trangThai: status,
     status,
-    anhgiaodich: d.anhGiaoDich || d.anhgiaodich || null,
-    anhGiaoDich: d.anhGiaoDich || d.anhgiaodich || null,
+    anhgiaodich: d.anhGiaoDich || d.anhgiaodich ? formatImageUrl(d.anhGiaoDich || d.anhgiaodich, '/images/minhchungmau.jpg') : null,
+    anhGiaoDich: d.anhGiaoDich || d.anhgiaodich ? formatImageUrl(d.anhGiaoDich || d.anhgiaodich, '/images/minhchungmau.jpg') : null,
     ghichu: d.ghiChu || d.ghichu || '',
     ghiChu: d.ghiChu || d.ghichu || '',
     ngaygui: d.ngayGui || d.ngaygui || receivedDate,
@@ -200,8 +200,45 @@ export const proposeSponsor = async (data) => {
 
 export const propose = proposeSponsor;
 
+const APPROVED_QUEUE_KEY = 'fundraiser_approved_donations_queue';
+
+export const getApprovedDonationsQueue = () => {
+  try {
+    const raw = localStorage.getItem(APPROVED_QUEUE_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.map(normalizeDonation) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveApprovedDonationToQueue = (item) => {
+  if (!item) return;
+  try {
+    const queue = getApprovedDonationsQueue().filter(
+      (x) => Number(x.maTaiTro) !== Number(item.maTaiTro)
+    );
+    queue.unshift(item);
+    localStorage.setItem(APPROVED_QUEUE_KEY, JSON.stringify(queue));
+  } catch {
+    // ignore storage errors
+  }
+};
+
+export const removeApprovedDonationFromQueue = (id) => {
+  try {
+    const queue = getApprovedDonationsQueue().filter(
+      (x) => Number(x.maTaiTro) !== Number(id)
+    );
+    localStorage.setItem(APPROVED_QUEUE_KEY, JSON.stringify(queue));
+  } catch {
+    // ignore storage errors
+  }
+};
+
 /**
- * Cán bộ lấy danh sách tài trợ cần xác nhận
+ * Cán bộ lấy danh sách đăng ký tài trợ chờ duyệt (CHODUYET)
+ * Endpoint: GET /fundraiser/approvals/donations
  */
 export const getPendingDonations = async () => {
   const res = await api.get('/fundraiser/approvals/donations');
@@ -210,31 +247,52 @@ export const getPendingDonations = async () => {
 };
 
 /**
- * Cán bộ xác nhận đã nhận tiền đóng góp
+ * Cán bộ duyệt đăng ký tài trợ (CHODUYET -> DADUYET)
+ * Endpoint: PUT /fundraiser/approvals/donations/{id}
  * @param {number|string} id
- * @param {object} data - { soTienTt, anhGiaoDich, ghiChu }
+ * @param {string} note
  */
-export const confirmDonation = async (id, data = {}) => {
-  const payload = {
-    soTienTt: data.soTienTt !== undefined ? Number(data.soTienTt) : undefined,
-    anhGiaoDich: data.anhGiaoDich || data.anhgiaodich,
-    ghiChu: data.ghiChu || data.ghichu,
-  };
-  const res = await api.put(`/fundraiser/approvals/donations/${id}/confirm`, payload);
-  return normalizeDonation(unwrap(res));
+export const approveDonation = async (id, note = '') => {
+  const res = await api.put(`/fundraiser/approvals/donations/${id}`, {
+    trangthai: 'DADUYET',
+    lydo: note ? String(note).trim() : null,
+  });
+  const updated = normalizeDonation(unwrap(res));
+  if (updated) {
+    saveApprovedDonationToQueue(updated);
+  }
+  return updated;
 };
 
-export const approveDonation = confirmDonation;
-
 /**
- * Từ chối tài trợ
+ * Cán bộ từ chối đăng ký tài trợ (CHODUYET -> TUCHOI)
+ * Endpoint: PUT /fundraiser/approvals/donations/{id}
+ * @param {number|string} id
+ * @param {string} reason
  */
 export const rejectDonation = async (id, reason = '') => {
   const res = await api.put(`/fundraiser/approvals/donations/${id}`, {
-    trangThai: 'TUCHOI',
-    ghiChu: reason,
+    trangthai: 'TUCHOI',
+    lydo: reason ? String(reason).trim() : null,
   });
+  removeApprovedDonationFromQueue(id);
   return normalizeDonation(unwrap(res));
+};
+
+/**
+ * Cán bộ xác nhận đã nhận tiền thực tế vào quỹ (DADUYET -> DANHAN, cộng dồn tongTienDaNhan)
+ * Endpoint: PUT /fundraiser/approvals/donations/{id}/confirm
+ * @param {number|string} id
+ * @param {object} data - { soTienTt, ghiChu }
+ */
+export const confirmDonation = async (id, data = {}) => {
+  const payload = {
+    soTienTt: data.soTienTt !== undefined && data.soTienTt !== null ? Number(data.soTienTt) : undefined,
+    ghiChu: data.ghiChu ? String(data.ghiChu).trim() : undefined,
+  };
+  const res = await api.put(`/fundraiser/approvals/donations/${id}/confirm`, payload);
+  removeApprovedDonationFromQueue(id);
+  return unwrap(res);
 };
 
 /**

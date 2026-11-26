@@ -8,6 +8,7 @@ const SAMPLE_BANNER_FALLBACKS = {
   '/uploads/banners/hoc-bong-anh-sang.jpg': encodeURI('/images/HỌC BỔNG ÁNH SÁNG VƯỢT KHÓ.jpg'),
   '/uploads/banners/gay-dinh-huong-thong-minh.jpg': '/images/gay_khiem_thi.jpg',
   '/uploads/banners/bep-an-dinh-duong.jpg': '/images/bep_an_bt.jpg',
+  '/uploads/banners/nhac-cu-dan-toc.jpg': '/images/minhchungmau.jpg',
 };
 
 /**

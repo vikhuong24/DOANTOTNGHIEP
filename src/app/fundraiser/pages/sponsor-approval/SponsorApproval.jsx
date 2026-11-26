@@ -1,8 +1,15 @@
-// Trang Duyệt & Quản lý đơn đăng ký tài trợ (Fundraiser) theo ERD mới
-// BẢNG TAITRO: maTaiTro, maNguoiDung, maBaiTaiTro, tenHienThi, soTienDK, soTienTT, anhGiaoDich, trangthai, maCanBo, ghichu, ngaygui, ngaynhan
-import { useState, useEffect } from 'react';
-import { getAllDonations, approveDonation, rejectDonation } from '../../../../services/donationService';
-import { getAllCampaigns } from '../../../../services/campaignService';
+// Trang Duyệt & Quản lý đơn đăng ký tài trợ (Fundraiser)
+// Kết nối API Backend: GET /fundraiser/approvals/donations & PUT /fundraiser/approvals/donations/{id}
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  getPendingDonations,
+  getAllDonations,
+  getApprovedDonationsQueue,
+  approveDonation,
+  rejectDonation,
+} from '../../../../services/donationService';
+import { getFundraiserCampaigns, getAllCampaigns } from '../../../../services/campaignService';
 import Card from '../../../../components/Card/Card';
 import Table from '../../../../components/Table/Table';
 import Button from '../../../../components/Button/Button';
@@ -12,24 +19,27 @@ import Tabs from '../../../../components/Tabs/Tabs';
 import Loading from '../../../../components/Loading/Loading';
 import { useNotification } from '../../../../components/Notification/Notification';
 import { formatDate, formatCurrency } from '../../../../utils/formatters';
-import { DONATION_STATUS_LABELS } from '../../../../utils/constants';
-import { FiCheck, FiX, FiEye, FiClock, FiCheckCircle, FiFileText, FiImage } from 'react-icons/fi';
+import { FiCheck, FiX, FiEye, FiClock, FiCheckCircle, FiFileText, FiImage, FiArrowRight } from 'react-icons/fi';
 import './SponsorApproval.css';
 
 const TABS = [
+  { value: 'CHODUYET', label: 'Chờ duyệt' },
+  { value: 'DADUYET', label: 'Đã duyệt (Chờ xác nhận tiền)' },
+  { value: 'DANHAN', label: 'Đã tiếp nhận vào quỹ' },
+  { value: 'TUCHOI', label: 'Đã từ chối' },
   { value: 'ALL', label: 'Tất cả' },
-  { value: 'ChoDuyet', label: 'Chờ duyệt' },
-  { value: 'DaDuyet', label: 'Đã duyệt' },
-  { value: 'DaNhan', label: 'Đã tiếp nhận' },
-  { value: 'TuChoi', label: 'Từ chối' },
 ];
 
 const SponsorApproval = () => {
+  const navigate = useNavigate();
   const { addToast } = useNotification();
   const [loading, setLoading] = useState(true);
-  const [donations, setDonations] = useState([]);
+  const [pendingList, setPendingList] = useState([]);
+  const [receivedList, setReceivedList] = useState([]);
+  const [approvedQueue, setApprovedQueue] = useState([]);
+  const [processedMap, setProcessedMap] = useState({});
   const [campaigns, setCampaigns] = useState([]);
-  const [activeTab, setActiveTab] = useState('ALL');
+  const [activeTab, setActiveTab] = useState('CHODUYET');
 
   // Detail Modal
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -43,14 +53,18 @@ const SponsorApproval = () => {
   const fetchList = async () => {
     try {
       setLoading(true);
-      const [donRes, campRes] = await Promise.all([
-        getAllDonations(),
-        getAllCampaigns(),
+      const [pendingRes, statementsRes, campRes] = await Promise.all([
+        getPendingDonations().catch(() => []),
+        getAllDonations({ size: 100 }).catch(() => ({ data: [] })),
+        getFundraiserCampaigns().catch(() => getAllCampaigns({ size: 100 }).then((r) => r.data || [])),
       ]);
-      setDonations(donRes?.data || donRes || []);
-      setCampaigns(campRes?.data || campRes || []);
+      setPendingList(pendingRes || []);
+      setReceivedList(statementsRes?.data || []);
+      setApprovedQueue(getApprovedDonationsQueue());
+      setCampaigns(Array.isArray(campRes) ? campRes : (campRes?.data || []));
     } catch (err) {
       console.error('Lỗi tải danh sách tài trợ:', err);
+      addToast('Không thể tải danh sách đơn đăng ký tài trợ', 'error');
     } finally {
       setLoading(false);
     }
@@ -60,15 +74,30 @@ const SponsorApproval = () => {
     fetchList();
   }, []);
 
-  const getCampaignTitle = (cId) => {
-    const c = campaigns.find((camp) => camp.maBaiTaiTro === cId);
-    return c?.tieude || `Chiến dịch #${cId}`;
+  const getCampaignTitle = (row) => {
+    if (row?.tieuDeBaiTaiTro) return row.tieuDeBaiTaiTro;
+    const cId = row?.maBaiTaiTro;
+    const c = campaigns.find((camp) => Number(camp.maBaiTaiTro) === Number(cId));
+    return c?.tieuDe || c?.tieude || `Chiến dịch #${cId}`;
   };
 
-  const filteredDonations = donations.filter((d) => {
-    if (activeTab === 'ALL') return true;
-    return d.trangthai === activeTab || d.status === activeTab;
-  });
+  // Gộp danh sách theo mã tài trợ (ưu tiên trạng thái mới nhất)
+  const allDonations = useMemo(() => {
+    const map = new Map();
+    receivedList.forEach((d) => map.set(Number(d.maTaiTro), d));
+    approvedQueue.forEach((d) => map.set(Number(d.maTaiTro), d));
+    pendingList.forEach((d) => map.set(Number(d.maTaiTro), d));
+    Object.values(processedMap).forEach((d) => map.set(Number(d.maTaiTro), d));
+    return Array.from(map.values());
+  }, [pendingList, receivedList, approvedQueue, processedMap]);
+
+  const filteredDonations = useMemo(() => {
+    return allDonations.filter((d) => {
+      const st = String(d.trangThai || d.trangthai || '').toUpperCase();
+      if (activeTab === 'ALL') return true;
+      return st === activeTab;
+    });
+  }, [allDonations, activeTab]);
 
   const handleOpenDetail = (row) => {
     setSelectedDonation(row);
@@ -79,12 +108,18 @@ const SponsorApproval = () => {
     const id = row.maTaiTro || row.id;
     try {
       setSubmittingAction(true);
-      await approveDonation(id);
-      addToast(`Đã duyệt đơn đăng ký tài trợ #${id}`, 'success');
+      const updated = await approveDonation(id);
+      if (updated) {
+        setProcessedMap((prev) => ({ ...prev, [id]: updated }));
+      }
+      addToast(
+        `Đã duyệt đơn đăng ký #${id} (chuyển sang DADUYET). Vui lòng sang mục "Xác nhận tiếp nhận tiền" để đối soát số tiền thực nhận!`,
+        'success'
+      );
       setDetailModalOpen(false);
       fetchList();
     } catch (err) {
-      addToast(err.message || 'Lỗi khi duyệt tài trợ', 'error');
+      addToast(err?.response?.data?.message || err.message || 'Lỗi khi duyệt tài trợ', 'error');
     } finally {
       setSubmittingAction(false);
     }
@@ -105,30 +140,35 @@ const SponsorApproval = () => {
     const id = selectedDonation.maTaiTro || selectedDonation.id;
     try {
       setSubmittingAction(true);
-      await rejectDonation(id, rejectReason);
+      const updated = await rejectDonation(id, rejectReason);
+      if (updated) {
+        setProcessedMap((prev) => ({ ...prev, [id]: updated }));
+      }
       addToast(`Đã từ chối đơn đăng ký tài trợ #${id}`, 'info');
       setRejectModalOpen(false);
       setDetailModalOpen(false);
       fetchList();
     } catch (err) {
-      addToast(err.message || 'Lỗi khi từ chối đơn', 'error');
+      addToast(err?.response?.data?.message || err.message || 'Lỗi khi từ chối đơn', 'error');
     } finally {
       setSubmittingAction(false);
     }
   };
 
   const getStatusBadge = (st) => {
-    switch (st) {
-      case 'ChoDuyet':
+    const s = String(st || '').toUpperCase();
+    switch (s) {
+      case 'CHODUYET':
         return <span className="sponsor-badge badge--pending"><FiClock /> Chờ duyệt</span>;
-      case 'DaDuyet':
+      case 'DADUYET':
         return <span className="sponsor-badge badge--approved"><FiCheckCircle /> Đã duyệt</span>;
-      case 'DaNhan':
-        return <span className="sponsor-badge badge--received"><FiCheck /> Đã nhận</span>;
-      case 'TuChoi':
+      case 'DANHAN':
+      case 'HOANTHANH':
+        return <span className="sponsor-badge badge--received"><FiCheck /> Đã tiếp nhận</span>;
+      case 'TUCHOI':
         return <span className="sponsor-badge badge--rejected"><FiX /> Từ chối</span>;
       default:
-        return <span className="sponsor-badge">{DONATION_STATUS_LABELS[st] || st}</span>;
+        return <span className="sponsor-badge">{s}</span>;
     }
   };
 
@@ -136,7 +176,7 @@ const SponsorApproval = () => {
     {
       key: 'maTaiTro',
       title: 'Mã đơn',
-      width: '80px',
+      width: '85px',
       render: (val, row) => `#TT${val || row.id}`,
     },
     {
@@ -144,63 +184,69 @@ const SponsorApproval = () => {
       title: 'Nhà hảo tâm',
       render: (val, row) => (
         <div>
-          <div className="font-semibold text-primary">{val || 'Ẩn danh'}</div>
-          <div className="text-muted text-sm">
-            {row.ghichu || row.ghiChu ? `"${row.ghichu || row.ghiChu}"` : 'Đăng ký đóng góp thiện nguyện'}
-          </div>
+          <div className="font-semibold text-primary">{val || row.tenNguoiDung || 'Ẩn danh'}</div>
+          {(row.sdtNguoiDung || row.emailNguoiDung) && (
+            <div style={{ fontSize: '0.78rem', color: '#666' }}>
+              {[row.sdtNguoiDung, row.emailNguoiDung].filter(Boolean).join(' • ')}
+            </div>
+          )}
+          {(row.ghiChu || row.ghichu) && (
+            <div className="text-muted text-sm">"{row.ghiChu || row.ghichu}"</div>
+          )}
         </div>
       ),
     },
     {
       key: 'maBaiTaiTro',
       title: 'Chiến dịch tiếp nhận',
-      render: (val) => (
-        <span className="font-medium text-text">
-          {getCampaignTitle(val)}
-        </span>
+      render: (_, row) => (
+        <span className="font-medium text-text">{getCampaignTitle(row)}</span>
       ),
     },
     {
-      key: 'soTienDK',
+      key: 'soTienDk',
       title: 'Số tiền ĐK',
-      width: '150px',
+      width: '140px',
       align: 'right',
       render: (val, row) => (
         <span className="font-semibold text-text">
-          {formatCurrency(val || row.amount || 0)}
+          {formatCurrency(val ?? row.soTienDK ?? row.amount ?? 0)}
         </span>
       ),
     },
     {
-      key: 'soTienTT',
-      title: 'Số tiền thực tế',
-      width: '150px',
+      key: 'soTienTt',
+      title: 'Số tiền thực nhận',
+      width: '140px',
       align: 'right',
-      render: (val) => (
-        <span className="font-bold text-success">
-          {val !== null && val !== undefined ? formatCurrency(val) : '—'}
-        </span>
-      ),
+      render: (val, row) => {
+        const st = String(row.trangThai || '').toUpperCase();
+        if (st === 'DANHAN' && val !== null && val !== undefined) {
+          return <span className="font-bold text-success">{formatCurrency(val)}</span>;
+        }
+        return <span className="text-muted">—</span>;
+      },
     },
     {
-      key: 'ngaygui',
+      key: 'ngayGui',
       title: 'Ngày gửi đơn',
       width: '120px',
-      render: (val, row) => formatDate(val || row.ngayGui || new Date().toISOString()),
+      render: (val, row) => formatDate(val || row.ngaygui),
     },
     {
-      key: 'trangthai',
+      key: 'trangThai',
       title: 'Trạng thái',
-      width: '130px',
-      render: (val, row) => getStatusBadge(val || row.status),
+      width: '140px',
+      render: (val, row) => getStatusBadge(val || row.trangthai),
     },
     {
       key: 'actions',
       title: 'Thao tác',
-      width: '170px',
+      width: '185px',
       render: (_, row) => {
-        const st = row.trangthai || row.status;
-        const isPending = st === 'ChoDuyet';
+        const st = String(row.trangThai || row.trangthai || '').toUpperCase();
+        const isPending = st === 'CHODUYET';
+        const isApproved = st === 'DADUYET';
         return (
           <div className="table-actions">
             <Button
@@ -217,7 +263,7 @@ const SponsorApproval = () => {
                   type="button"
                   className="btn-quick-approve"
                   onClick={() => handleApprove(row)}
-                  title="Duyệt đơn"
+                  title="Duyệt đơn (CHODUYET → DADUYET)"
                   disabled={submittingAction}
                 >
                   <FiCheck />
@@ -233,6 +279,16 @@ const SponsorApproval = () => {
                 </button>
               </>
             )}
+            {isApproved && (
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => navigate('/fundraiser/donation-confirm')}
+                title="Chuyển sang đối soát xác nhận tiền thực nhận"
+              >
+                <FiArrowRight /> Xác nhận tiền
+              </Button>
+            )}
           </div>
         );
       },
@@ -245,7 +301,7 @@ const SponsorApproval = () => {
         <div>
           <h1 className="page-title">Phê Duyệt Đơn Đăng Ký Tài Trợ</h1>
           <p className="page-subtitle">
-            Xét duyệt các yêu cầu đăng ký tài trợ kinh phí từ nhà hảo tâm
+            Bước 1: Kiểm tra thông tin, biên lai và duyệt yêu cầu đăng ký tài trợ từ nhà hảo tâm (trạng thái CHODUYET → DADUYET).
           </p>
         </div>
       </div>
@@ -263,7 +319,7 @@ const SponsorApproval = () => {
             data={filteredDonations}
             rowKey="maTaiTro"
             emptyTitle="Không có đơn đăng ký nào"
-            emptyDescription="Chưa có bản ghi tài trợ nào khớp với bộ lọc."
+            emptyDescription="Chưa có bản ghi tài trợ nào khớp với trạng thái đã chọn."
           />
         )}
       </Card>
@@ -276,7 +332,7 @@ const SponsorApproval = () => {
         size="md"
         footer={
           <div className="modal-buttons">
-            {selectedDonation?.trangthai === 'ChoDuyet' && (
+            {String(selectedDonation?.trangThai || selectedDonation?.trangthai || '').toUpperCase() === 'CHODUYET' && (
               <>
                 <Button
                   variant="danger"
@@ -294,6 +350,17 @@ const SponsorApproval = () => {
                 </Button>
               </>
             )}
+            {String(selectedDonation?.trangThai || selectedDonation?.trangthai || '').toUpperCase() === 'DADUYET' && (
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setDetailModalOpen(false);
+                  navigate('/fundraiser/donation-confirm');
+                }}
+              >
+                <FiArrowRight /> Đi tới Xác nhận tiền thực nhận
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setDetailModalOpen(false)}>
               Đóng
             </Button>
@@ -303,36 +370,48 @@ const SponsorApproval = () => {
         {selectedDonation && (
           <div className="sponsor-detail-body">
             <div className="detail-row">
-              <span className="detail-label">Tên người ủng hộ:</span>
+              <span className="detail-label">Tên hiển thị vinh danh:</span>
               <span className="detail-value font-bold">{selectedDonation.tenHienThi}</span>
             </div>
+            {selectedDonation.tenNguoiDung && (
+              <div className="detail-row">
+                <span className="detail-label">Tài khoản đăng ký:</span>
+                <span className="detail-value">
+                  {selectedDonation.tenNguoiDung}{' '}
+                  {(selectedDonation.sdtNguoiDung || selectedDonation.emailNguoiDung) &&
+                    `(${[selectedDonation.sdtNguoiDung, selectedDonation.emailNguoiDung].filter(Boolean).join(' • ')})`}
+                </span>
+              </div>
+            )}
             <div className="detail-row">
               <span className="detail-label">Chiến dịch tiếp nhận:</span>
               <span className="detail-value font-semibold">
-                {getCampaignTitle(selectedDonation.maBaiTaiTro)}
+                {getCampaignTitle(selectedDonation)}
               </span>
             </div>
             <div className="detail-row">
               <span className="detail-label">Số tiền đăng ký tài trợ:</span>
               <span className="detail-value font-bold text-success text-lg">
-                {formatCurrency(selectedDonation.soTienDK || selectedDonation.amount || 0)}
+                {formatCurrency(selectedDonation.soTienDk ?? selectedDonation.soTienDK ?? selectedDonation.amount ?? 0)}
               </span>
             </div>
-            {selectedDonation.soTienTT !== null && selectedDonation.soTienTT !== undefined && (
-              <div className="detail-row">
-                <span className="detail-label">Số tiền thực tế tiếp nhận:</span>
-                <span className="detail-value font-bold text-primary">
-                  {formatCurrency(selectedDonation.soTienTT)}
-                </span>
-              </div>
-            )}
+            {String(selectedDonation.trangThai || '').toUpperCase() === 'DANHAN' &&
+              selectedDonation.soTienTt !== null &&
+              selectedDonation.soTienTt !== undefined && (
+                <div className="detail-row">
+                  <span className="detail-label">Số tiền thực tế tiếp nhận:</span>
+                  <span className="detail-value font-bold text-primary">
+                    {formatCurrency(selectedDonation.soTienTt)}
+                  </span>
+                </div>
+              )}
             <div className="detail-row">
               <span className="detail-label">Thời gian gửi đăng ký:</span>
-              <span className="detail-value">{formatDate(selectedDonation.ngaygui || selectedDonation.ngayGui)}</span>
+              <span className="detail-value">{formatDate(selectedDonation.ngayGui || selectedDonation.ngaygui)}</span>
             </div>
             <div className="detail-row">
               <span className="detail-label">Trạng thái hiện tại:</span>
-              <span className="detail-value">{getStatusBadge(selectedDonation.trangthai)}</span>
+              <span className="detail-value">{getStatusBadge(selectedDonation.trangThai || selectedDonation.trangthai)}</span>
             </div>
 
             {/* Ảnh giao dịch đính kèm */}
@@ -345,16 +424,20 @@ const SponsorApproval = () => {
                   src={selectedDonation.anhGiaoDich}
                   alt="Biên lai giao dịch"
                   style={{ maxWidth: '100%', maxHeight: '250px', borderRadius: '6px', objectFit: 'contain' }}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/images/minhchungmau.jpg';
+                  }}
                 />
               </div>
             )}
 
-            {(selectedDonation.ghichu || selectedDonation.ghiChu) && (
+            {(selectedDonation.ghiChu || selectedDonation.ghichu) && (
               <div className="sponsor-note-box" style={{ marginTop: '1rem' }}>
                 <div className="note-title">
-                  <FiFileText /> Lời nhắn gửi từ nhà hảo tâm:
+                  <FiFileText /> Ghi chú / Lời nhắn:
                 </div>
-                <p className="note-text">{selectedDonation.ghichu || selectedDonation.ghiChu}</p>
+                <p className="note-text">{selectedDonation.ghiChu || selectedDonation.ghichu}</p>
               </div>
             )}
           </div>
@@ -389,7 +472,7 @@ const SponsorApproval = () => {
             label="Lý do từ chối đơn"
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
-            placeholder="Ví dụ: Thông tin liên lạc không chính xác, chiến dịch đã hoàn thành chỉ tiêu..."
+            placeholder="Ví dụ: Thông tin giao dịch không khớp, chưa nhận được chứng từ hợp lệ..."
             required
           />
         </div>

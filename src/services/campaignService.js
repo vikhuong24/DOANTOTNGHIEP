@@ -114,48 +114,91 @@ export const getCampaignById = async (id) => {
 };
 
 /**
+ * Chuyển đổi chuỗi ngày (YYYY-MM-DD hoặc ISO) sang định dạng LocalDateTime của Spring Boot (YYYY-MM-DDTHH:mm:ss)
+ */
+const toLocalDateTime = (val, isEndOfDay = false) => {
+  if (!val) return null;
+  const s = String(val).trim();
+  if (!s) return null;
+  if (s.includes('T')) {
+    return s.length === 16 ? `${s}:00` : s.slice(0, 19);
+  }
+  return `${s}T${isEndOfDay ? '23:59:59' : '00:00:00'}`;
+};
+
+/**
  * Cán bộ tạo bài gây quỹ mới
+ * Endpoint: POST /fundraiser/campaigns
  * @param {object} data
  */
 export const createCampaign = async (data) => {
+  const rawStatus = data.trangThai || data.trangthai || data.status || 'CHODUYET';
   const payload = {
-    tieuDe: data.tieuDe || data.tieude || data.title,
-    noiDung: data.noiDung || data.noidung || data.description,
-    anhBia: data.anhBia || data.anhbia || data.thumbnail,
+    tieuDe: String(data.tieuDe || data.tieude || data.title || '').trim(),
+    noiDung: String(data.noiDung || data.noidung || data.description || '').trim(),
+    anhBia: (data.anhBia || data.anhbia || data.thumbnail || '').trim() || null,
     mucTieu: Number(data.mucTieu || data.muctieu || data.targetAmount || 0),
-    ngayBatDau: data.ngayBatDau || data.ngaybatdau || data.startDate,
-    ngayKetThuc: data.ngayKetThuc || data.ngaykethuc || data.endDate,
+    trangThai: String(rawStatus).toUpperCase(),
+    ngayBatDau: toLocalDateTime(data.ngayBatDau || data.ngaybatdau || data.startDate, false),
+    ngayKetThuc: toLocalDateTime(data.ngayKetThuc || data.ngaykethuc || data.endDate, true),
   };
   const res = await api.post('/fundraiser/campaigns', payload);
   return normalizeCampaign(unwrap(res));
 };
 
 /**
- * Cán bộ cập nhật bài gây quỹ
+ * Cán bộ cập nhật bài gây quỹ (Partial Update)
+ * Endpoint: PUT /fundraiser/campaigns/{id}
  * @param {number|string} id
  * @param {object} data
  */
 export const updateCampaign = async (id, data) => {
-  const payload = {
-    tieuDe: data.tieuDe || data.tieude || data.title,
-    noiDung: data.noiDung || data.noidung || data.description,
-    anhBia: data.anhBia || data.anhbia || data.thumbnail,
-    mucTieu: Number(data.mucTieu || data.muctieu || data.targetAmount || 0),
-    ngayBatDau: data.ngayBatDau || data.ngaybatdau || data.startDate,
-    ngayKetThuc: data.ngayKetThuc || data.ngaykethuc || data.endDate,
-    trangThai: data.trangThai || data.trangthai || data.status,
-  };
+  const payload = {};
+  const tieuDe = data.tieuDe ?? data.tieude ?? data.title;
+  if (tieuDe !== undefined) payload.tieuDe = String(tieuDe).trim();
+
+  const noiDung = data.noiDung ?? data.noidung ?? data.description;
+  if (noiDung !== undefined) payload.noiDung = String(noiDung).trim();
+
+  const anhBia = data.anhBia ?? data.anhbia ?? data.thumbnail;
+  if (anhBia !== undefined && String(anhBia).trim()) payload.anhBia = String(anhBia).trim();
+
+  const mucTieu = data.mucTieu ?? data.muctieu ?? data.targetAmount;
+  if (mucTieu !== undefined && Number(mucTieu) > 0) payload.mucTieu = Number(mucTieu);
+
+  const trangThai = data.trangThai ?? data.trangthai ?? data.status;
+  if (trangThai !== undefined && String(trangThai).trim()) {
+    payload.trangThai = String(trangThai).toUpperCase();
+  }
+
+  const ngayBatDau = data.ngayBatDau ?? data.ngaybatdau ?? data.startDate;
+  if (ngayBatDau) payload.ngayBatDau = toLocalDateTime(ngayBatDau, false);
+
+  const ngayKetThuc = data.ngayKetThuc ?? data.ngaykethuc ?? data.endDate;
+  if (ngayKetThuc) payload.ngayKetThuc = toLocalDateTime(ngayKetThuc, true);
+
   const res = await api.put(`/fundraiser/campaigns/${id}`, payload);
   return normalizeCampaign(unwrap(res));
 };
 
 /**
- * Lấy danh sách các bài gây quỹ của cán bộ
+ * Lấy danh sách các bài gây quỹ do cán bộ đang đăng nhập tạo
+ * Endpoint: GET /fundraiser/campaigns
  */
 export const getFundraiserCampaigns = async () => {
   const res = await api.get('/fundraiser/campaigns');
   const list = unwrapList(res);
   return list.map(normalizeCampaign);
+};
+
+/**
+ * Cán bộ xem chi tiết một bài gây quỹ theo ID (kể cả NHAP, CHODUYET, TUCHOI)
+ * Endpoint: GET /fundraiser/campaigns/{id}
+ * @param {number|string} id
+ */
+export const getFundraiserCampaignById = async (id) => {
+  const res = await api.get(`/fundraiser/campaigns/${id}`);
+  return normalizeCampaign(unwrap(res));
 };
 
 /**

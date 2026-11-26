@@ -100,23 +100,33 @@ const CampaignCreate = () => {
 
   const validate = () => {
     const errs = {};
-    if (!formData.tieude.trim()) errs.tieude = 'Vui lòng nhập tiêu đề chiến dịch';
-    if (!formData.noidung.trim()) errs.noidung = 'Vui lòng nhập nội dung chi tiết';
-    if (!formData.muctieu || Number(formData.muctieu) <= 0) {
-      errs.muctieu = 'Mục tiêu gây quỹ phải lớn hơn 0';
+    const titleTrimmed = formData.tieude.trim();
+    if (!titleTrimmed) {
+      errs.tieude = 'Vui lòng nhập tiêu đề chiến dịch';
+    } else if (titleTrimmed.length < 5 || titleTrimmed.length > 255) {
+      errs.tieude = 'Tiêu đề chiến dịch phải từ 5 đến 255 ký tự';
     }
+
+    if (!formData.noidung.trim()) {
+      errs.noidung = 'Vui lòng nhập nội dung chi tiết';
+    }
+
+    if (!formData.muctieu || Number(formData.muctieu) < 1000) {
+      errs.muctieu = 'Số tiền mục tiêu tối thiểu là 1,000 VNĐ';
+    }
+
     if (!formData.ngaybatdau) errs.ngaybatdau = 'Vui lòng chọn ngày bắt đầu';
     if (!formData.ngaykethuc) errs.ngaykethuc = 'Vui lòng chọn ngày kết thúc';
 
-    if (new Date(formData.ngaybatdau) >= new Date(formData.ngaykethuc)) {
-      errs.ngaykethuc = 'Ngày kết thúc phải diễn ra sau ngày bắt đầu';
+    if (formData.ngaybatdau && formData.ngaykethuc && new Date(formData.ngaykethuc) < new Date(formData.ngaybatdau)) {
+      errs.ngaykethuc = 'Ngày kết thúc không được nhỏ hơn ngày bắt đầu';
     }
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = async (trangthai = 'ChoDuyet') => {
+  const handleSubmit = async (trangthai = 'CHODUYET') => {
     if (!validate()) {
       addToast('Vui lòng kiểm tra lại các trường thông tin bắt buộc', 'error');
       return;
@@ -124,22 +134,23 @@ const CampaignCreate = () => {
 
     try {
       setLoading(true);
+      const normalizedStatus = String(trangthai).toUpperCase();
       const payload = {
         ...formData,
-        trangthai,
-        maCanBo: user?.maNguoiDung || user?.id || 3,
+        trangThai: normalizedStatus,
       };
 
       await createCampaign(payload);
       addToast(
-        trangthai === 'Nhap'
+        normalizedStatus === 'NHAP'
           ? 'Đã lưu bản nháp bài gây quỹ thành công!'
           : 'Đã gửi bài gây quỹ lên Ban Giám Hiệu phê duyệt!',
         'success'
       );
       navigate('/fundraiser/campaign-update');
     } catch (err) {
-      addToast(err.message || 'Có lỗi xảy ra khi tạo chiến dịch', 'error');
+      const msg = err?.response?.data?.message || err?.message || 'Có lỗi xảy ra khi tạo chiến dịch';
+      addToast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -299,7 +310,7 @@ const CampaignCreate = () => {
                 variant="outline"
                 fullWidth
                 loading={loading}
-                onClick={() => handleSubmit('Nhap')}
+                onClick={() => handleSubmit('NHAP')}
               >
                 <FiSave /> Lưu bản nháp
               </Button>
@@ -308,7 +319,7 @@ const CampaignCreate = () => {
                 fullWidth
                 size="lg"
                 loading={loading}
-                onClick={() => handleSubmit('ChoDuyet')}
+                onClick={() => handleSubmit('CHODUYET')}
               >
                 <FiSend /> Gửi phê duyệt ngay
               </Button>

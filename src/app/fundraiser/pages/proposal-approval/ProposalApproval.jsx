@@ -16,15 +16,16 @@ import './ProposalApproval.css';
 
 const STATUS_TABS = [
   { value: 'ALL', label: 'Tất cả' },
-  { value: 'ChoDuyet', label: 'Chờ duyệt' },
-  { value: 'DaDuyet', label: 'Đã duyệt' },
-  { value: 'TuChoi', label: 'Đã từ chối' },
+  { value: 'CHODUYET', label: 'Chờ duyệt' },
+  { value: 'DADUYET', label: 'Đã duyệt' },
+  { value: 'TUCHOI', label: 'Đã từ chối' },
 ];
 
 const ProposalApproval = () => {
   const { addToast } = useNotification();
   const [loading, setLoading] = useState(true);
   const [proposals, setProposals] = useState([]);
+  const [processedMap, setProcessedMap] = useState({});
   const [activeTab, setActiveTab] = useState('ALL');
 
   // Modal Chi tiết
@@ -56,11 +57,20 @@ const ProposalApproval = () => {
     return row?.tenNguoiDung || row?.tenHienThi || (userId ? `Nhà hảo tâm #${userId}` : 'Nhà hảo tâm');
   };
 
-  const filteredProposals = proposals.filter((p) => {
-    const st = p.trangthai || p.trangThai || p.status;
-    if (activeTab === 'ALL') return true;
-    return st === activeTab;
-  });
+  const filteredProposals = (() => {
+    // Kết hợp danh sách CHODUYET từ Backend và các đề xuất vừa xử lý trong phiên
+    const pendingIds = new Set(proposals.map((p) => Number(p.maDeXuat || p.id)));
+    const extraProcessed = Object.values(processedMap).filter(
+      (p) => !pendingIds.has(Number(p.maDeXuat || p.id))
+    );
+    const combined = [...proposals, ...extraProcessed];
+
+    return combined.filter((p) => {
+      const st = String(p.trangThai || p.trangthai || p.status || '').toUpperCase();
+      if (activeTab === 'ALL') return true;
+      return st === activeTab;
+    });
+  })();
 
   const handleOpenDetail = (item) => {
     setSelectedProposal(item);
@@ -71,12 +81,15 @@ const ProposalApproval = () => {
     const id = item.madexuat || item.maDeXuat || item.id;
     try {
       setSubmittingAction(true);
-      await approveProposal(id);
+      const updated = await approveProposal(id, true);
+      if (updated) {
+        setProcessedMap((prev) => ({ ...prev, [id]: updated }));
+      }
       addToast(`Đã phê duyệt đề xuất tài trợ #${id} thành công!`, 'success');
       setDetailModalOpen(false);
       fetchProposals();
     } catch (err) {
-      addToast(err.message || 'Không thể phê duyệt đề xuất', 'error');
+      addToast(err?.response?.data?.message || err.message || 'Không thể phê duyệt đề xuất', 'error');
     } finally {
       setSubmittingAction(false);
     }
@@ -97,27 +110,31 @@ const ProposalApproval = () => {
     const id = selectedProposal.madexuat || selectedProposal.maDeXuat || selectedProposal.id;
     try {
       setSubmittingAction(true);
-      await rejectProposal(id, rejectReason);
+      const updated = await rejectProposal(id, rejectReason);
+      if (updated) {
+        setProcessedMap((prev) => ({ ...prev, [id]: updated }));
+      }
       addToast(`Đã từ chối đề xuất tài trợ #${id}`, 'info');
       setRejectModalOpen(false);
       setDetailModalOpen(false);
       fetchProposals();
     } catch (err) {
-      addToast(err.message || 'Thao tác thất bại', 'error');
+      addToast(err?.response?.data?.message || err.message || 'Thao tác thất bại', 'error');
     } finally {
       setSubmittingAction(false);
     }
   };
 
   const renderStatus = (st) => {
-    if (st === 'DaDuyet') {
+    const s = String(st || '').toUpperCase();
+    if (s === 'DADUYET') {
       return (
         <span className="badge-proposal-status status-approved">
           <FiCheckCircle /> Đã duyệt
         </span>
       );
     }
-    if (st === 'TuChoi') {
+    if (s === 'TUCHOI') {
       return (
         <span className="badge-proposal-status status-rejected">
           <FiXCircle /> Đã từ chối
@@ -178,8 +195,8 @@ const ProposalApproval = () => {
       title: 'Thao tác',
       width: '180px',
       render: (_, row) => {
-        const st = row.trangthai || row.status;
-        const isPending = st === 'ChoDuyet';
+        const st = String(row.trangThai || row.trangthai || row.status || '').toUpperCase();
+        const isPending = st === 'CHODUYET';
         return (
           <div className="table-actions">
             <Button
@@ -255,7 +272,7 @@ const ProposalApproval = () => {
         size="md"
         footer={
           <div className="modal-buttons">
-            {selectedProposal?.trangthai === 'ChoDuyet' && (
+            {String(selectedProposal?.trangThai || selectedProposal?.trangthai || '').toUpperCase() === 'CHODUYET' && (
               <>
                 <Button
                   variant="danger"
@@ -285,8 +302,19 @@ const ProposalApproval = () => {
               <span className="detail-label">Người đề xuất:</span>
               <span className="detail-value font-bold">
                 {getUserName(selectedProposal.manguoidung, selectedProposal)}
+                {(selectedProposal.sdtNguoiDung || selectedProposal.emailNguoiDung) && (
+                  <span style={{ fontWeight: 400, fontSize: '0.85rem', color: '#666', marginLeft: '6px' }}>
+                    ({[selectedProposal.sdtNguoiDung, selectedProposal.emailNguoiDung].filter(Boolean).join(' • ')})
+                  </span>
+                )}
               </span>
             </div>
+            {selectedProposal.tieuDeBaiTaiTro && (
+              <div className="detail-row">
+                <span className="detail-label">Chiến dịch liên quan:</span>
+                <span className="detail-value">{selectedProposal.tieuDeBaiTaiTro}</span>
+              </div>
+            )}
             <div className="detail-row">
               <span className="detail-label">Tiêu đề đề xuất:</span>
               <span className="detail-value font-semibold text-primary">
@@ -296,7 +324,7 @@ const ProposalApproval = () => {
             <div className="detail-row">
               <span className="detail-label">Số tiền đề xuất:</span>
               <span className="detail-value font-bold text-success">
-                {formatCurrency(selectedProposal.soTienDX || selectedProposal.giaTriUocTinh || 0)}
+                {formatCurrency(selectedProposal.soTienDx ?? selectedProposal.soTienDX ?? selectedProposal.giaTriUocTinh ?? 0)}
               </span>
             </div>
             <div className="detail-row">
@@ -325,7 +353,7 @@ const ProposalApproval = () => {
             <div className="detail-desc-box">
               <div className="desc-title">Mục đích sử dụng nguồn kinh phí:</div>
               <p className="desc-text">
-                {selectedProposal.mucdichSD || selectedProposal.moTa || selectedProposal.content}
+                {selectedProposal.mucDichSd || selectedProposal.mucdichSD || selectedProposal.moTa || selectedProposal.content || '—'}
               </p>
             </div>
           </div>

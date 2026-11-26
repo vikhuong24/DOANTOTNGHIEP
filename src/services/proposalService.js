@@ -66,11 +66,13 @@ export const proposeSponsor = async (data) => {
 
 /**
  * Cán bộ phê duyệt hoặc từ chối đề xuất tài trợ
+ * Endpoint: PUT /fundraiser/approvals/proposals/{id}
+ * Payload (ApprovalDecisionRequest): { trangthai: 'DADUYET' | 'TUCHOI', lydo }
  */
 export const approveProposal = async (id, approved = true, rejectReason = '') => {
   const payload = {
-    trangThai: approved ? 'DADUYET' : 'TUCHOI',
-    lyDoTuChoi: rejectReason || null,
+    trangthai: approved ? 'DADUYET' : 'TUCHOI',
+    lydo: rejectReason ? String(rejectReason).trim() : null,
   };
   const res = await api.put(`/fundraiser/approvals/proposals/${id}`, payload);
   return normalizeProposal(unwrap(res));
