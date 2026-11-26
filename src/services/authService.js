@@ -152,20 +152,47 @@ export const getCurrentUser = () => {
 };
 
 /**
- * Cập nhật thông tin tài khoản cá nhân
+ * Lấy thông tin hồ sơ cá nhân của Nhà hảo tâm từ backend
+ * Endpoint: GET /donor/profile
+ * @returns {Promise<object>}
+ */
+export const getProfile = async () => {
+  const res = await api.get('/donor/profile');
+  return unwrap(res);
+};
+
+/**
+ * Cập nhật thông tin tài khoản cá nhân của Nhà hảo tâm
+ * Endpoint: PUT /donor/profile
+ * Payload: { hoTen, email, sdt, diaChi }
+ * @param {object} data
+ * @returns {Promise<{profile: object, user: object, message: string}>}
  */
 export const updateProfile = async (data) => {
-  try {
-    const res = await api.put('/donor/profile', data);
-    const updated = normalizeUser(unwrap(res));
-    if (updated) {
-      localStorage.setItem('user', JSON.stringify(updated));
-    }
-    return updated;
-  } catch (err) {
-    console.error('Lỗi khi cập nhật profile:', err);
-    throw err;
+  const payload = {
+    hoTen: data.hoTen || data.hoten || data.name || undefined,
+    email: data.email ? String(data.email).trim().toLowerCase() : undefined,
+    sdt: data.sdt ? String(data.sdt).trim() : undefined,
+    diaChi: data.diaChi !== undefined ? data.diaChi : (data.diachi !== undefined ? data.diachi : undefined),
+  };
+
+  const res = await api.put('/donor/profile', payload);
+  const updatedProfile = unwrap(res);
+  const currentUser = getCurrentUser() || {};
+  const mergedUser = normalizeUser({
+    ...currentUser,
+    ...updatedProfile,
+  });
+
+  if (mergedUser) {
+    localStorage.setItem('user', JSON.stringify(mergedUser));
   }
+
+  return {
+    profile: updatedProfile,
+    user: mergedUser,
+    message: res?.message || 'Cập nhật thông tin cá nhân thành công',
+  };
 };
 
 /**

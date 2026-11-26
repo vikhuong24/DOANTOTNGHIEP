@@ -19,16 +19,16 @@ const PrincipalRoutes = () => (
         </PrivateRoute>
       }
     >
-      <Route index element={<Navigate to="campaign-approval" replace />} />
-      <Route path="dashboard" element={<Navigate to="campaign-approval" replace />} />
-      <Route path="approvals" element={<Navigate to="campaign-approval" replace />} />
+      <Route index element={<Navigate to="/principal/campaign-approval" replace />} />
+      <Route path="dashboard" element={<Navigate to="/principal/campaign-approval" replace />} />
+      <Route path="approvals" element={<Navigate to="/principal/campaign-approval" replace />} />
       <Route path="campaign-approval" element={<CampaignApproval />} />
       <Route path="distribution-approval" element={<DistributionApproval />} />
       <Route path="financial-report" element={<FinancialReport />} />
-      <Route path="reports" element={<Navigate to="financial-report" replace />} />
+      <Route path="reports" element={<Navigate to="/principal/financial-report" replace />} />
       <Route path="parent-feedback-view" element={<ParentFeedbackView />} />
       <Route path="staff-response-view" element={<StaffResponseView />} />
-      <Route path="*" element={<Navigate to="campaign-approval" replace />} />
+      <Route path="*" element={<Navigate to="/principal/campaign-approval" replace />} />
     </Route>
   </Routes>
 );

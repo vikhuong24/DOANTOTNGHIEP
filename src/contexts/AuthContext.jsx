@@ -87,6 +87,20 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
+   * Cập nhật thông tin người dùng trong context và localStorage
+   */
+  const updateUser = useCallback((newUserData) => {
+    if (!newUserData) return;
+    setUser(newUserData);
+    localStorage.setItem('user', JSON.stringify(newUserData));
+    const code = (newUserData.maVaiTro || newUserData.role || newUserData.vaiTro || '').toUpperCase();
+    if (code) {
+      setRoleCode(code);
+      setRole(ROLE_ROUTE_PREFIX[code] || code.toLowerCase());
+    }
+  }, []);
+
+  /**
    * Kiểm tra quyền truy cập theo vai trò
    * @param {string[]} allowedRoles - Danh sách role cho phép (chấp nhận cả mã IN HOA hoặc slug in thường)
    * @returns {boolean}
@@ -125,6 +139,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    updateUser,
     hasRole,
   };
 

@@ -18,16 +18,16 @@ const AdminRoutes = () => (
         </PrivateRoute>
       }
     >
-      <Route index element={<Navigate to="user-management" replace />} />
-      <Route path="dashboard" element={<Navigate to="user-management" replace />} />
-      <Route path="users" element={<Navigate to="user-management" replace />} />
+      <Route index element={<Navigate to="/admin/user-management" replace />} />
+      <Route path="dashboard" element={<Navigate to="/admin/user-management" replace />} />
+      <Route path="users" element={<Navigate to="/admin/user-management" replace />} />
       <Route path="user-management" element={<UserManagement />} />
       <Route path="students" element={<StudentManagement />} />
       <Route path="student-management" element={<StudentManagement />} />
       <Route path="role-permission" element={<RolePermission />} />
       <Route path="campaign-statistics" element={<CampaignStatistics />} />
-      <Route path="reports" element={<Navigate to="campaign-statistics" replace />} />
-      <Route path="*" element={<Navigate to="user-management" replace />} />
+      <Route path="reports" element={<Navigate to="/admin/campaign-statistics" replace />} />
+      <Route path="*" element={<Navigate to="/admin/user-management" replace />} />
     </Route>
   </Routes>
 );

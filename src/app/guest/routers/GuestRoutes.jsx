@@ -11,8 +11,8 @@ const GuestRoutes = () => {
   return (
     <Routes>
       <Route element={<GuestLayout />}>
-        <Route index element={<Navigate to="campaigns" replace />} />
-        <Route path="home" element={<Navigate to="../campaigns" replace />} />
+        <Route index element={<Navigate to="/campaigns" replace />} />
+        <Route path="home" element={<Navigate to="/campaigns" replace />} />
         <Route path="campaigns" element={<CampaignList />} />
         <Route path="campaigns/:id" element={<CampaignDetail />} />
         <Route path="campaign/:id" element={<CampaignDetail />} />
@@ -21,7 +21,7 @@ const GuestRoutes = () => {
         <Route path="register" element={<Register />} />
         {/* Chuyển hướng login về trang /login duy nhất */}
         <Route path="login" element={<Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to="campaigns" replace />} />
+        <Route path="*" element={<Navigate to="/campaigns" replace />} />
       </Route>
     </Routes>
   );

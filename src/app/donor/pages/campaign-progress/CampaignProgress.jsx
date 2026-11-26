@@ -1,168 +1,159 @@
 // CampaignProgress: Danh sách dự án Nhà hảo tâm đã tài trợ và tiến trình giải ngân/minh chứng
-import { useState, useEffect, useMemo } from 'react';
+// Kết nối trực tiếp API Backend Spring Boot: GET /donor/campaigns/progress & GET /donor/donations/history
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FiCheckCircle, FiClock, FiFileText, FiImage, FiExternalLink, FiHeart } from 'react-icons/fi';
 import Card from '../../../../components/Card/Card';
 import ProgressBar from '../../../../components/ProgressBar/ProgressBar';
 import Modal from '../../../../components/Modal/Modal';
 import Button from '../../../../components/Button/Button';
 import Loading from '../../../../components/Loading/Loading';
 import EmptyState from '../../../../components/EmptyState/EmptyState';
-import { useAuth } from '../../../../contexts/AuthContext';
-import { getAllCampaigns } from '../../../../services/campaignService';
-import { getAllDonations } from '../../../../services/donationService';
-import { getAllEvidences } from '../../../../services/evidenceService';
+import { getCampaignsProgress, getDonationHistory } from '../../../../services/donationService';
 import { formatCurrency, formatCurrencyShort } from '../../../../utils/formatCurrency';
 import { formatDate } from '../../../../utils/formatDate';
 import './CampaignProgress.css';
 
 const CampaignProgress = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [campaigns, setCampaigns] = useState([]);
-  const [myDonations, setMyDonations] = useState([]);
-  const [evidences, setEvidences] = useState([]);
+  const [historySummary, setHistorySummary] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Modal xem chi tiết dự án + minh chứng
   const [selectedCamp, setSelectedCamp] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const userId = user?.maNguoiDung || user?.id || 1;
-        const [campsRes, myDonsRes, evisRes] = await Promise.all([
-          getAllCampaigns(),
-          getAllDonations({ maNguoiDung: userId }),
-          getAllEvidences(),
-        ]);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [progRes, histRes] = await Promise.all([
+        getCampaignsProgress(),
+        getDonationHistory(),
+      ]);
 
-        setCampaigns(campsRes.data || []);
-        setMyDonations(myDonsRes.data || []);
-        setEvidences(evisRes.data || []);
-      } catch (err) {
-        console.error('Lỗi tải tiến trình tài trợ:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [user]);
-
-  // Tính tổng số tiền đã đóng góp của NHT này
-  const totalContributed = useMemo(() => {
-    return myDonations
-      .filter((d) => d.trangthai === 'DaNhan' || d.trangthai === 'HoanThanh')
-      .reduce((sum, d) => sum + (d.soTienTT ?? d.soTienDK ?? d.amount ?? 0), 0);
-  }, [myDonations]);
-
-  // Lấy danh sách ID các chiến dịch mà NHT này đã tài trợ
-  const sponsoredCampaignIds = useMemo(() => {
-    return [...new Set(myDonations.map((d) => d.maBaiTaiTro))];
-  }, [myDonations]);
-
-  // Các dự án mà NHT đã tham gia
-  const myCampaigns = useMemo(() => {
-    return campaigns.filter((c) => sponsoredCampaignIds.includes(c.maBaiTaiTro));
-  }, [campaigns, sponsoredCampaignIds]);
-
-  // Trạng thái tiến trình tiếng Việt: Đang gây quỹ / Đã đủ / Hoàn thành
-  const getProgressStatus = (camp, percent) => {
-    if (camp.trangthai === 'KetThuc') return 'Hoàn thành';
-    if (percent >= 100) return 'Đã đủ mục tiêu';
-    if (percent > 0) return 'Đang gây quỹ';
-    return 'Chuẩn bị triển khai';
+      setCampaigns(progRes || []);
+      setHistorySummary(histRes || {});
+    } catch (err) {
+      console.error('Lỗi tải tiến trình tài trợ:', err);
+      setError(err?.message || 'Không thể tải tiến trình các dự án đã tài trợ');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const totalSuccessfulAmount = historySummary?.tongTienDongGopThanhCong || 0;
+  const totalDonationCount = historySummary?.danhSachDongGop?.length || 0;
 
   const handleOpenDetail = (camp) => {
     setSelectedCamp(camp);
     setModalOpen(true);
   };
 
-  // Lọc minh chứng cho chiến dịch đang xem modal
-  const selectedEvidences = useMemo(() => {
-    if (!selectedCamp) return [];
-    return evidences.filter((e) => e.mabaitaitro === selectedCamp.maBaiTaiTro);
-  }, [selectedCamp, evidences]);
-
   return (
     <div className="progress-page">
       <div className="progress-header">
         <h1>Tiến trình các dự án đã tài trợ</h1>
-        <p>Theo dõi chi tiết số tiền đóng góp, tỷ lệ hoàn thành mục tiêu và hồ sơ minh chứng giải ngân thực tế.</p>
+        <p>Theo dõi chi tiết số tiền đóng góp, tỷ lệ hoàn thành mục tiêu và hồ sơ minh chứng giải ngân thực tế từ nhà trường.</p>
       </div>
 
-      {/* Summary KPI Cards */}
+      {/* Summary KPI Cards - Dữ liệu chính thức từ Backend */}
       <div className="progress-summary-cards">
         <div className="summary-card">
-          <span className="summary-card-label">Tổng số tiền bạn đã đóng góp</span>
-          <span className="summary-card-value">{formatCurrency(totalContributed)}</span>
+          <span className="summary-card-label">Tổng số tiền bạn đã đóng góp thành công</span>
+          <span className="summary-card-value">{formatCurrency(totalSuccessfulAmount)}</span>
         </div>
         <div className="summary-card">
           <span className="summary-card-label">Số dự án bạn đã đồng hành</span>
           <span className="summary-card-value" style={{ color: 'var(--secondary)' }}>
-            {myCampaigns.length} dự án
+            {campaigns.length} dự án
           </span>
         </div>
         <div className="summary-card">
-          <span className="summary-card-label">Số lượt đăng ký tài trợ</span>
+          <span className="summary-card-label">Tổng số lượt đăng ký tài trợ</span>
           <span className="summary-card-value" style={{ color: 'var(--accent)' }}>
-            {myDonations.length} lượt
+            {totalDonationCount} lượt
           </span>
         </div>
       </div>
 
       {/* Grid Projects */}
       {loading ? (
-        <Loading type="skeleton" rows={4} />
-      ) : myCampaigns.length === 0 ? (
+        <div style={{ padding: '3rem 0' }}>
+          <Loading type="skeleton" rows={4} />
+        </div>
+      ) : error ? (
+        <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+          <p style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</p>
+          <Button variant="outline" onClick={fetchData}>
+            Thử lại
+          </Button>
+        </div>
+      ) : campaigns.length === 0 ? (
         <EmptyState
+          icon={<FiHeart size={44} style={{ color: 'var(--primary)' }} />}
           title="Bạn chưa có khoản đóng góp nào"
-          description="Hãy khám phá các chương trình gây quỹ của trường và cùng chung tay thắp sáng ước mơ cho các em học sinh."
+          description="Hãy khám phá các chương trình gây quỹ của trường và cùng chung tay thắp sáng ước mơ cho các em học sinh có hoàn cảnh đặc biệt."
           actionLabel="Khám phá chương trình ngay"
-          onAction={() => window.location.href = '/campaigns'}
+          onAction={() => navigate('/campaigns')}
         />
       ) : (
         <div className="progress-grid">
-          {myCampaigns.map((camp) => {
-            const target = camp.muctieu || 0;
-            const totalRaised = camp.tongtienDaNhan || 0;
-            const percent = target > 0 ? (totalRaised / target) * 100 : 0;
-            const statusLabel = getProgressStatus(camp, percent);
-
-            // Số tiền cá nhân đóng góp cho riêng dự án này
-            const myContributionToThis = myDonations
-              .filter((d) => d.maBaiTaiTro === camp.maBaiTaiTro)
-              .reduce((sum, d) => sum + (d.soTienTT ?? d.soTienDK ?? d.amount ?? 0), 0);
+          {campaigns.map((camp) => {
+            const isEnded =
+              String(camp.trangThai).toUpperCase() === 'KETTHUC' ||
+              String(camp.trangthai).toUpperCase() === 'KETTHUC';
+            const percent = Number(camp.phanTramHoanThanh || 0);
 
             return (
               <Card key={camp.maBaiTaiTro} hoverable padding={false}>
                 <img
-                  src={camp.anhbia || 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600'}
-                  alt={camp.tieude}
+                  src={
+                    camp.anhBia ||
+                    camp.anhbia ||
+                    'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600'
+                  }
+                  alt={camp.tieuDe}
                   className="progress-item-thumb"
                 />
 
                 <div className="progress-item-content">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span className="badge badge--primary">{statusLabel}</span>
+                    <span className={`badge ${isEnded ? 'badge--secondary' : 'badge--primary'}`}>
+                      {isEnded ? 'Đã hoàn tất' : 'Đang gây quỹ'}
+                    </span>
                     <span style={{ fontSize: '0.8rem', color: '#888' }}>
-                      Đến {formatDate(camp.ngaykethuc)}
+                      Tiến độ: {percent.toFixed(1)}%
                     </span>
                   </div>
 
-                  <h3 className="progress-item-title">{camp.tieude}</h3>
+                  <h3 className="progress-item-title">{camp.tieuDe}</h3>
 
                   <div className="progress-donation-badge">
                     <span>Bạn đã tài trợ:</span>
-                    <strong>{formatCurrency(myContributionToThis)}</strong>
+                    <strong>{formatCurrency(camp.tongTienToiDaDongGop || 0)}</strong>
                   </div>
 
                   <div>
                     <ProgressBar percent={percent} height={8} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginTop: '4px', color: '#666' }}>
-                      <span>Thực tế: {formatCurrencyShort(totalRaised)}</span>
-                      <span>Mục tiêu: {formatCurrencyShort(target)}</span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '0.8rem',
+                        marginTop: '4px',
+                        color: '#666',
+                      }}
+                    >
+                      <span>Đã nhận: {formatCurrencyShort(camp.tongTienDaNhan || 0)}</span>
+                      <span>Mục tiêu: {formatCurrencyShort(camp.mucTieu || 0)}</span>
                     </div>
                   </div>
 
@@ -172,7 +163,7 @@ const CampaignProgress = () => {
                     fullWidth
                     onClick={() => handleOpenDetail(camp)}
                   >
-                    Xem chi tiết & Minh chứng
+                    <FiFileText /> Xem chi tiết & Minh chứng
                   </Button>
                 </div>
               </Card>
@@ -186,40 +177,97 @@ const CampaignProgress = () => {
         <Modal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
-          title={`Tiến trình dự án: ${selectedCamp.tieude}`}
+          title={`Tiến trình dự án: ${selectedCamp.tieuDe}`}
           size="lg"
           footer={
-            <Button variant="outline" size="md" onClick={() => setModalOpen(false)}>
-              Đóng cửa sổ
-            </Button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setModalOpen(false);
+                  navigate(`/campaigns/${selectedCamp.maBaiTaiTro}`);
+                }}
+              >
+                <FiExternalLink /> Xem trang bài viết
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setModalOpen(false)}>
+                Đóng cửa sổ
+              </Button>
+            </div>
           }
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div style={{ background: '#f8faf8', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-              <p style={{ margin: '0 0 0.5rem 0' }}><strong>Nội dung:</strong> {selectedCamp.noidung}</p>
-              <p style={{ margin: '0 0 0.5rem 0' }}><strong>Thời gian thực hiện:</strong> Từ {formatDate(selectedCamp.ngaybatdau)} đến {formatDate(selectedCamp.ngaykethuc)}</p>
-              <p style={{ margin: '0 0 0.5rem 0' }}><strong>Mục tiêu kinh phí:</strong> {formatCurrency(selectedCamp.muctieu || 0)}</p>
-              <p style={{ margin: 0 }}><strong>Đã tiếp nhận:</strong> <span className="font-bold text-success">{formatCurrency(selectedCamp.tongtienDaNhan || 0)}</span></p>
+            <div
+              style={{
+                background: '#f8faf8',
+                padding: '1rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.85rem', color: '#666' }}>Mục tiêu gây quỹ:</span>
+                  <div style={{ fontWeight: 700 }}>{formatCurrency(selectedCamp.mucTieu || 0)}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.85rem', color: '#666' }}>Thực tế tiếp nhận:</span>
+                  <div style={{ fontWeight: 700, color: 'var(--success)' }}>
+                    {formatCurrency(selectedCamp.tongTienDaNhan || 0)}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.85rem', color: '#666' }}>Bạn đã đóng góp:</span>
+                  <div style={{ fontWeight: 700, color: 'var(--primary)' }}>
+                    {formatCurrency(selectedCamp.tongTienToiDaDongGop || 0)}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.85rem', color: '#666' }}>Trạng thái chiến dịch:</span>
+                  <div>
+                    <span className="badge badge--primary">
+                      {String(selectedCamp.trangThai).toUpperCase() === 'KETTHUC' ? 'Hoàn tất' : 'Đang tiếp nhận'}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
+            {/* Danh sách minh chứng từ Backend */}
             <div className="progress-modal-evidences">
               <h4 style={{ fontSize: '1rem', marginBottom: '0.75rem', color: 'var(--text)' }}>
-                Hồ sơ minh chứng & giải ngân thực tế ({selectedEvidences.length})
+                Hồ sơ minh chứng & giải ngân thực tế ({(selectedCamp.danhSachMinhChung || []).length})
               </h4>
-              {selectedEvidences.length === 0 ? (
+              {(!selectedCamp.danhSachMinhChung || selectedCamp.danhSachMinhChung.length === 0) ? (
                 <p style={{ color: '#888', fontStyle: 'italic', marginTop: '0.5rem' }}>
-                  Ban quản lý dự án đang tiến hành tổng hợp hóa đơn và chứng từ, minh chứng sẽ được cập nhật sớm nhất.
+                  Ban quản lý nhà trường đang tổng hợp hóa đơn, chứng từ và hình ảnh trao quà. Minh chứng sẽ được cập nhật sớm nhất tại đây.
                 </p>
               ) : (
                 <div className="evidence-thumb-grid">
-                  {selectedEvidences.map((evi) => (
-                    <div key={evi.maMinhchung} className="evidence-thumb-item">
+                  {selectedCamp.danhSachMinhChung.map((evi) => (
+                    <div key={evi.maMinhChung} className="evidence-thumb-item">
                       <div className="evidence-thumb-img-wrap">
-                        <img src={evi.duongdantep} alt={evi.mota} />
+                        {evi.duongDanTep && (evi.duongDanTep.endsWith('.pdf') || evi.loaiTaiLieu === 'HOADON' || evi.loaiTaiLieu === 'CHUNG_TU') ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--primary)' }}>
+                            <FiFileText size={36} />
+                            <span style={{ fontSize: '0.75rem', marginTop: '4px' }}>Chứng từ PDF / Tài liệu</span>
+                          </div>
+                        ) : (
+                          <img
+                            src={evi.duongDanTep || 'https://images.unsplash.com/photo-1577495508048-b635879837f1?w=400'}
+                            alt={evi.moTa}
+                          />
+                        )}
                       </div>
                       <div className="evidence-thumb-desc">
-                        {evi.loaitailieu && <span className="evidence-type-tag">[{evi.loaitailieu}]</span>}
-                        <p>{evi.mota}</p>
+                        {evi.loaiTaiLieu && <span className="evidence-type-tag">[{evi.loaiTaiLieu}]</span>}
+                        <p>{evi.moTa}</p>
+                        {evi.ngayTaiLen && (
+                          <span style={{ fontSize: '0.75rem', color: '#888' }}>
+                            {formatDate(evi.ngayTaiLen)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}

@@ -1,30 +1,33 @@
-// Profile: Hồ sơ cá nhân Nhà hảo tâm, chỉnh sửa thông tin, đổi mật khẩu và liên kết lịch sử đóng góp
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FiUser, FiLock, FiClock } from 'react-icons/fi';
+// Profile: Hồ sơ cá nhân Nhà hảo tâm, chỉnh sửa thông tin liên hệ và xem trạng thái tài khoản
+// Kết nối trực tiếp API Backend Spring Boot: GET /donor/profile và PUT /donor/profile
+import { useState, useEffect } from 'react';
+import { FiUser, FiLock, FiCalendar, FiMapPin, FiPhone, FiMail } from 'react-icons/fi';
 import Input from '../../../../components/Input/Input';
 import Button from '../../../../components/Button/Button';
 import Tabs from '../../../../components/Tabs/Tabs';
+import Loading from '../../../../components/Loading/Loading';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useNotification } from '../../../../components/Notification/Notification';
-import { updateProfile, changePassword } from '../../../../services/authService';
-import { validatePhone, validatePassword, validateRequired } from '../../../../utils/validators';
+import { getProfile, updateProfile } from '../../../../services/authService';
+import { validatePhone, validateEmail, validateRequired } from '../../../../utils/validators';
+import { formatDate } from '../../../../utils/formatDate';
 import './Profile.css';
 
 const Profile = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { addToast } = useNotification();
 
   const [activeTab, setActiveTab] = useState('info');
+  const [loading, setLoading] = useState(true);
 
   // Form Thông tin cá nhân
   const [profileData, setProfileData] = useState({
-    hoten: user?.hoten || user?.name || '',
-    email: user?.email || '',
-    sdt: user?.sdt || '',
-    diachi: user?.diachi || '',
-    avatar: user?.avatar || '',
+    maNguoiDung: null,
+    hoten: '',
+    email: '',
+    sdt: '',
+    diachi: '',
+    ngayTao: null,
   });
   const [profileErrors, setProfileErrors] = useState({});
   const [loadingProfile, setLoadingProfile] = useState(false);
@@ -37,6 +40,48 @@ const Profile = () => {
   });
   const [passwordErrors, setPasswordErrors] = useState({});
   const [loadingPassword, setLoadingPassword] = useState(false);
+
+  // Tải dữ liệu hồ sơ từ Backend khi mở trang
+  useEffect(() => {
+    let isMounted = true;
+    const fetchProfileData = async () => {
+      try {
+        setLoading(true);
+        const data = await getProfile();
+        if (isMounted && data) {
+          setProfileData({
+            maNguoiDung: data.maNguoiDung || data.id,
+            hoten: data.hoTen || user?.hoten || user?.name || '',
+            email: data.email || user?.email || '',
+            sdt: data.sdt || user?.sdt || '',
+            diachi: data.diaChi || user?.diaChi || user?.diachi || '',
+            ngayTao: data.ngayTao || null,
+          });
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải hồ sơ Nhà hảo tâm:', err);
+        addToast(err?.message || 'Không thể tải thông tin hồ sơ từ máy chủ', 'error');
+        // Fallback sang thông tin từ token/context
+        if (isMounted && user) {
+          setProfileData({
+            maNguoiDung: user.maNguoiDung || user.id,
+            hoten: user.hoten || user.name || '',
+            email: user.email || '',
+            sdt: user.sdt || '',
+            diachi: user.diaChi || user.diachi || '',
+            ngayTao: null,
+          });
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchProfileData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Xử lý đổi tab
   const handleTabChange = (val) => {
@@ -53,11 +98,17 @@ const Profile = () => {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     const errs = {};
+
     const nameErr = validateRequired(profileData.hoten, 'Họ và tên');
     if (nameErr) errs.hoten = nameErr;
 
-    const phoneErr = validatePhone(profileData.sdt);
-    if (phoneErr) errs.sdt = phoneErr;
+    const emailErr = validateEmail(profileData.email);
+    if (emailErr) errs.email = emailErr;
+
+    if (profileData.sdt) {
+      const phoneErr = validatePhone(profileData.sdt);
+      if (phoneErr) errs.sdt = phoneErr;
+    }
 
     if (Object.keys(errs).length > 0) {
       setProfileErrors(errs);
@@ -66,16 +117,22 @@ const Profile = () => {
 
     setLoadingProfile(true);
     try {
-      await updateProfile({
-        hoten: profileData.hoten,
-        name: profileData.hoten,
+      const res = await updateProfile({
+        hoTen: profileData.hoten,
+        email: profileData.email,
         sdt: profileData.sdt,
-        diachi: profileData.diachi,
-        avatar: profileData.avatar,
+        diaChi: profileData.diachi,
       });
-      addToast('Cập nhật hồ sơ thành công!', 'success');
+
+      if (updateUser && res.user) {
+        updateUser(res.user);
+      }
+
+      addToast(res.message || 'Cập nhật hồ sơ thành công!', 'success');
     } catch (err) {
-      addToast(err?.message || 'Không thể cập nhật hồ sơ', 'error');
+      const errorMsg =
+        err?.response?.data?.message || err?.message || 'Không thể cập nhật hồ sơ cá nhân';
+      addToast(errorMsg, 'error');
     } finally {
       setLoadingProfile(false);
     }
@@ -92,8 +149,11 @@ const Profile = () => {
     e.preventDefault();
     const errs = {};
     if (!passwordData.oldPassword) errs.oldPassword = 'Vui lòng nhập mật khẩu cũ';
-    const passErr = validatePassword(passwordData.newPassword);
-    if (passErr) errs.newPassword = passErr;
+    if (!passwordData.newPassword) {
+      errs.newPassword = 'Vui lòng nhập mật khẩu mới';
+    } else if (passwordData.newPassword.length < 6) {
+      errs.newPassword = 'Mật khẩu mới phải từ 6 ký tự trở lên';
+    }
 
     if (!passwordData.confirmPassword) {
       errs.confirmPassword = 'Vui lòng xác nhận mật khẩu mới';
@@ -108,11 +168,14 @@ const Profile = () => {
 
     setLoadingPassword(true);
     try {
-      await changePassword(passwordData.oldPassword, passwordData.newPassword);
-      addToast('Đổi mật khẩu thành công!', 'success');
+      // Backend hiện tại chưa cung cấp endpoint đổi mật khẩu cho Nhà hảo tâm
+      addToast(
+        'Hệ thống đang bảo trì chức năng đổi mật khẩu trực tuyến. Quý nhà hảo tâm vui lòng liên hệ quản trị viên nhà trường để được hỗ trợ cấp lại mật khẩu!',
+        'info'
+      );
       setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      addToast(err?.message || 'Mật khẩu cũ không chính xác', 'error');
+      addToast(err?.message || 'Không thể đổi mật khẩu', 'error');
     } finally {
       setLoadingPassword(false);
     }
@@ -123,22 +186,33 @@ const Profile = () => {
     { value: 'security', label: 'Bảo mật & Đổi mật khẩu', icon: <FiLock /> },
   ];
 
+  if (loading) {
+    return (
+      <div className="profile-page" style={{ padding: '2rem', display: 'flex', justifyContent: 'center' }}>
+        <Loading text="Đang tải dữ liệu hồ sơ cá nhân..." />
+      </div>
+    );
+  }
+
   return (
     <div className="profile-page">
       {/* Header Profile Card */}
       <div className="profile-header-card">
         <div className="profile-avatar-large">
-          {profileData.avatar ? (
-            <img src={profileData.avatar} alt={profileData.hoten} />
-          ) : (
-            (profileData.hoten || 'N')[0]?.toUpperCase()
-          )}
+          {(profileData.hoten || user?.hoten || 'N')[0]?.toUpperCase()}
         </div>
         <div className="profile-header-info">
-          <h2>{profileData.hoten || 'Nhà hảo tâm'}</h2>
-          <p>{profileData.email}</p>
-          <div style={{ marginTop: '0.5rem' }}>
+          <h2>{profileData.hoten || user?.hoten || 'Nhà hảo tâm'}</h2>
+          <p style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <FiMail /> {profileData.email || user?.email}
+          </p>
+          <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             <span className="badge badge--success">Nhà hảo tâm đồng hành</span>
+            {profileData.ngayTao && (
+              <span className="badge" style={{ background: '#e9ecef', color: '#495057' }}>
+                <FiCalendar style={{ marginRight: '4px' }} /> Tham gia: {formatDate(profileData.ngayTao)}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -165,9 +239,12 @@ const Profile = () => {
               <Input
                 label="Địa chỉ Email"
                 name="email"
+                type="email"
                 value={profileData.email}
-                disabled
-                helpText="Email đăng nhập không thể thay đổi"
+                onChange={handleProfileChange}
+                error={profileErrors.email}
+                required
+                helpText="Email sử dụng để nhận thông báo và đối soát tài trợ"
               />
             </div>
 
@@ -178,24 +255,17 @@ const Profile = () => {
                 value={profileData.sdt}
                 onChange={handleProfileChange}
                 error={profileErrors.sdt}
-                required
+                placeholder="0912345678 (10 chữ số)"
+                helpText="Bắt đầu bằng 0 và bao gồm đúng 10 chữ số"
               />
               <Input
-                label="Đường dẫn ảnh đại diện (URL)"
-                name="avatar"
-                placeholder="https://..."
-                value={profileData.avatar}
+                label="Địa chỉ cư trú / Doanh nghiệp"
+                name="diachi"
+                value={profileData.diachi}
                 onChange={handleProfileChange}
+                placeholder="Quận/Huyện, Tỉnh/TP"
               />
             </div>
-
-            <Input
-              label="Địa chỉ cư trú / Doanh nghiệp"
-              name="diachi"
-              value={profileData.diachi}
-              onChange={handleProfileChange}
-              placeholder="Quận/Huyện, Tỉnh/TP"
-            />
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
               <Button type="submit" variant="primary" loading={loadingProfile}>
@@ -210,6 +280,20 @@ const Profile = () => {
       {activeTab === 'security' && (
         <div className="profile-section-card">
           <h3 style={{ marginBottom: '1.25rem' }}>Thiết lập mật khẩu mới</h3>
+          <div
+            style={{
+              padding: '0.85rem 1rem',
+              backgroundColor: '#e7f5ff',
+              borderLeft: '4px solid var(--primary)',
+              borderRadius: '4px',
+              fontSize: '0.875rem',
+              color: '#1864ab',
+              marginBottom: '1.5rem',
+            }}
+          >
+            <strong>Lưu ý bảo mật:</strong> Để đảm bảo an toàn tuyệt đối cho tài khoản đóng góp từ thiện, mật khẩu tài khoản được mã hóa một chiều Bcrypt trên hệ thống.
+          </div>
+
           <form onSubmit={handleChangePassword} className="profile-form" style={{ maxWidth: '480px' }}>
             <Input
               label="Mật khẩu hiện tại"

@@ -99,35 +99,55 @@ export const getFeedbacksByUser = async (userId) => {
   }
 };
 
+// Helper alias cho các component dùng createFeedback
+
+
 /**
- * Tạo mới phản hồi (Nhà tài trợ hoặc Phụ huynh)
+ * Lấy danh sách phản hồi của Nhà hảo tâm hiện tại kèm câu trả lời từ nhà trường
+ * Endpoint: GET /donor/feedbacks
+ * @returns {Promise<Array>}
  */
-export const createFeedback = async (data) => {
-  const payload = {
-    tieuDe: data.tieuDe || data.tieude,
-    noiDung: data.noiDung || data.noidung,
-    maBaiTaiTro: data.maBaiTaiTro || data.mabaitaitro || null,
-  };
-  try {
-    const res = await api.post('/donor/feedbacks', payload);
-    return normalizeFeedback(unwrap(res));
-  } catch {
-    const res = await api.post('/parent/feedbacks', payload);
-    return normalizeFeedback(unwrap(res));
-  }
-};
-
-export const createDonorFeedback = createFeedback;
-export const createParentFeedback = createFeedback;
-
 export const getDonorFeedbacks = async () => {
   const res = await api.get('/donor/feedbacks');
   const list = unwrapList(res);
   return list.map(normalizeFeedback);
 };
 
+/**
+ * Nhà hảo tâm gửi phản hồi / ý kiến đóng góp mới
+ * Endpoint: POST /donor/feedbacks
+ * Payload: { maBaiTaiTro, maDotPhanBo, tieuDe, noiDung }
+ * @param {object} data
+ * @returns {Promise<object>}
+ */
+export const sendDonorFeedback = async (data) => {
+  const payload = {
+    maBaiTaiTro: data.maBaiTaiTro ? Number(data.maBaiTaiTro) : null,
+    maDotPhanBo: data.maDotPhanBo ? Number(data.maDotPhanBo) : null,
+    tieuDe: String(data.tieuDe || data.tieude || '').trim(),
+    noiDung: String(data.noiDung || data.noidung || '').trim(),
+  };
+  const res = await api.post('/donor/feedbacks', payload);
+  return normalizeFeedback(unwrap(res));
+};
+
+export const createDonorFeedback = sendDonorFeedback;
+export const createFeedback = sendDonorFeedback;
+
 export const getParentFeedbacks = async () => {
   const res = await api.get('/parent/feedbacks');
   const list = unwrapList(res);
   return list.map(normalizeFeedback);
 };
+
+export const createParentFeedback = async (data) => {
+  const payload = {
+    tieuDe: String(data.tieuDe || data.tieude || '').trim(),
+    noiDung: String(data.noiDung || data.noidung || '').trim(),
+    maBaiTaiTro: data.maBaiTaiTro ? Number(data.maBaiTaiTro) : null,
+  };
+  const res = await api.post('/parent/feedbacks', payload);
+  return normalizeFeedback(unwrap(res));
+};
+
+

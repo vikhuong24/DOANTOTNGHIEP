@@ -43,9 +43,9 @@ const FundraiserRoutes = () => {
         <Route path="disbursement-progress" element={<DisbursementProgress />} />
         <Route path="parent-feedback" element={<ParentFeedback />} />
         <Route path="donor-feedback" element={<DonorFeedback />} />
-        <Route path="feedback" element={<Navigate to="parent-feedback" replace />} />
+        <Route path="feedback" element={<Navigate to="/fundraiser/parent-feedback" replace />} />
         <Route path="chat-assistant" element={<ChatAssistant />} />
-        <Route path="*" element={<Navigate to="campaign-update" replace />} />
+        <Route path="*" element={<Navigate to="/fundraiser/campaign-update" replace />} />
       </Route>
     </Routes>
   );

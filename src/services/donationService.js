@@ -79,44 +79,119 @@ export const getDonations = getAllDonations;
 export const getStatements = getAllDonations;
 
 /**
- * Lấy lịch sử đóng góp của Nhà hảo tâm hiện tại
+ * Lấy danh sách tiến trình các bài đăng mà Nhà hảo tâm đã từng ủng hộ
+ * Endpoint: GET /donor/campaigns/progress
+ * @returns {Promise<Array>}
+ */
+export const getCampaignsProgress = async () => {
+  const res = await api.get('/donor/campaigns/progress');
+  const list = unwrapList(res);
+  return list.map((item) => ({
+    ...item,
+    maBaiTaiTro: item.maBaiTaiTro || item.id,
+    tieuDe: item.tieuDe || item.tieude || '',
+    anhBia: item.anhBia || item.anhbia || '',
+    mucTieu: Number(item.mucTieu || item.muctieu || 0),
+    tongTienDaNhan: Number(item.tongTienDaNhan || item.tongtienDaNhan || 0),
+    phanTramHoanThanh: Number(item.phanTramHoanThanh ?? 0),
+    trangThai: item.trangThai || item.trangthai || 'DADUYET',
+    tongTienToiDaDongGop: Number(item.tongTienToiDaDongGop ?? 0),
+    danhSachMinhChung: item.danhSachMinhChung || [],
+  }));
+};
+
+/**
+ * Lấy toàn bộ lịch sử đóng góp của Nhà hảo tâm (bao gồm khoản tài trợ và đề xuất)
+ * Endpoint: GET /donor/donations/history
+ * @returns {Promise<{tongTienDongGopThanhCong: number, danhSachDongGop: Array, danhSachDeXuat: Array}>}
  */
 export const getDonationHistory = async () => {
   const res = await api.get('/donor/donations/history');
-  const list = unwrapList(res);
-  return list.map(normalizeDonation);
+  const data = unwrap(res) || {};
+
+  const danhSachDongGop = (data.danhSachDongGop || []).map((t) => ({
+    ...t,
+    id: t.maTaiTro,
+    maTaiTro: t.maTaiTro,
+    maBaiTaiTro: t.maBaiTaiTro,
+    tieuDeBaiTaiTro: t.tieuDeBaiTaiTro || '',
+    tenHienThi: t.tenHienThi || 'Nhà hảo tâm ẩn danh',
+    soTienDk: Number(t.soTienDk || 0),
+    soTienTt: t.soTienTt !== null && t.soTienTt !== undefined ? Number(t.soTienTt) : null,
+    anhGiaoDich: t.anhGiaoDich || null,
+    trangThai: t.trangThai || 'CHODUYET',
+    ghiChu: t.ghiChu || '',
+    ngayGui: t.ngayGui,
+    ngayNhan: t.ngayNhan,
+  }));
+
+  const danhSachDeXuat = (data.danhSachDeXuat || []).map((d) => ({
+    ...d,
+    id: d.maDeXuat,
+    maDeXuat: d.maDeXuat,
+    maBaiTaiTro: d.maBaiTaiTro,
+    tieuDeBaiTaiTro: d.tieuDeBaiTaiTro || '',
+    tieuDe: d.tieuDe || '',
+    soTienDx: Number(d.soTienDx || 0),
+    mucDichSd: d.mucDichSd || '',
+    trangThai: d.trangThai || 'CHODUYET',
+    lyDoTuChoi: d.lyDoTuChoi || '',
+    ngayGui: d.ngayGui,
+    ngayXuLy: d.ngayXuLy,
+  }));
+
+  return {
+    tongTienDongGopThanhCong: Number(data.tongTienDongGopThanhCong || 0),
+    danhSachDongGop,
+    danhSachDeXuat,
+  };
 };
 
 /**
  * Nhà hảo tâm đăng ký ủng hộ tiền cho chiến dịch
- * @param {object} data - { maBaiTaiTro, tenHienThi, soTienDk, ghiChu, anhGiaoDich }
+ * Endpoint: POST /donor/donations/register
+ * Payload: { maBaiTaiTro, tenHienThi, soTienDk, ghiChu, anhGiaoDich }
+ * @param {object} data
  */
 export const registerDonation = async (data) => {
   const payload = {
     maBaiTaiTro: Number(data.maBaiTaiTro || data.campaignId),
-    tenHienThi: data.tenHienThi || data.tenhienthi || 'Nhà hảo tâm ẩn danh',
-    soTienDk: Number(data.soTienDk || data.soitendk || data.amount || 0),
-    ghiChu: data.ghiChu || data.ghichu || '',
-    anhGiaoDich: data.anhGiaoDich || data.anhgiaodich || null,
+    tenHienThi: data.tenHienThi ? String(data.tenHienThi).trim() : undefined,
+    soTienDk: Number(data.soTienDk || data.soTienDK || data.amount || 0),
+    ghiChu: data.ghiChu ? String(data.ghiChu).trim() : undefined,
+    anhGiaoDich: data.anhGiaoDich ? String(data.anhGiaoDich).trim() : undefined,
   };
   const res = await api.post('/donor/donations/register', payload);
-  return normalizeDonation(unwrap(res));
+  const unwrapped = unwrap(res);
+  return {
+    success: true,
+    message: res?.message || 'Đăng ký ủng hộ thành công',
+    ...unwrapped,
+  };
 };
 
 export const register = registerDonation;
 
 /**
- * Nhà hảo tâm gửi đề xuất tài trợ
+ * Nhà hảo tâm gửi đề xuất tài trợ mới
+ * Endpoint: POST /donor/donations/propose
+ * Payload: { maBaiTaiTro, tieuDe, soTienDx, mucDichSd }
+ * @param {object} data
  */
 export const proposeSponsor = async (data) => {
   const payload = {
     maBaiTaiTro: data.maBaiTaiTro ? Number(data.maBaiTaiTro) : null,
-    tieuDe: data.tieuDe || data.tieude || '',
-    soTienDx: Number(data.soTienDx || data.soitendx || data.amount || 0),
-    mucDichSd: data.mucDichSd || data.mucdichsd || '',
+    tieuDe: String(data.tieuDe || data.tieude || '').trim(),
+    soTienDx: Number(data.soTienDx || data.soTienDX || data.amount || 0),
+    mucDichSd: String(data.mucDichSd || data.mucdichSD || '').trim(),
   };
   const res = await api.post('/donor/donations/propose', payload);
-  return normalizeDonation(unwrap(res));
+  const unwrapped = unwrap(res);
+  return {
+    success: true,
+    message: res?.message || 'Gửi đề xuất tài trợ thành công',
+    ...unwrapped,
+  };
 };
 
 export const propose = proposeSponsor;
