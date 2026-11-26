@@ -4,13 +4,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { createCampaign } from '../../../../services/campaignService';
+import { uploadImage } from '../../../../services/fileService';
 import { generateCampaignContent } from '../../../../services/assistantService';
 import { useNotification } from '../../../../components/Notification/Notification';
+import { formatImageUrl } from '../../../../utils/formatters';
 import Card from '../../../../components/Card/Card';
 import Input from '../../../../components/Input/Input';
 import Button from '../../../../components/Button/Button';
 import Modal from '../../../../components/Modal/Modal';
-import { FiZap, FiSend, FiSave, FiInfo } from 'react-icons/fi';
+import { FiZap, FiSend, FiSave, FiInfo, FiUpload } from 'react-icons/fi';
 import './CampaignCreate.css';
 
 const CampaignCreate = () => {
@@ -19,6 +21,7 @@ const CampaignCreate = () => {
   const { addToast } = useNotification();
 
   const [loading, setLoading] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
@@ -41,6 +44,27 @@ const CampaignCreate = () => {
       [name]: name === 'muctieu' ? Number(value) : value,
     }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+  };
+
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      addToast('Kích thước ảnh bìa tối đa 5MB', 'warning');
+      return;
+    }
+    try {
+      setUploadingCover(true);
+      const uploaded = await uploadImage(file, 'campaigns');
+      if (uploaded?.url) {
+        setFormData((prev) => ({ ...prev, anhbia: uploaded.url }));
+        addToast('Tải lên ảnh bìa thành công!', 'success');
+      }
+    } catch (err) {
+      addToast(err?.message || 'Không thể tải ảnh bìa lên máy chủ', 'error');
+    } finally {
+      setUploadingCover(false);
+    }
   };
 
   // AI Hỗ trợ viết bài
@@ -189,14 +213,29 @@ const CampaignCreate = () => {
                 required
               />
 
-              <Input
-                label="Đường dẫn ảnh bìa chiến dịch (URL)"
-                name="anhbia"
-                value={formData.anhbia}
-                onChange={handleChange}
-                placeholder="https://..."
-                helpText="Dán liên kết ảnh minh họa sắc nét thể hiện đúng bối cảnh gây quỹ"
-              />
+              <div className="input-wrap">
+                <label className="input-label">Ảnh bìa chiến dịch (Tải từ máy hoặc nhập URL)</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label className="btn btn--outline btn--sm" style={{ cursor: uploadingCover ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <FiUpload /> {uploadingCover ? 'Đang tải lên...' : 'Chọn ảnh từ máy'}
+                    <input
+                      type="file"
+                      accept="image/png, image/jpeg, image/webp"
+                      onChange={handleCoverUpload}
+                      disabled={uploadingCover}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                  <span style={{ fontSize: '0.8rem', color: '#666' }}>Hoặc dán URL bên dưới</span>
+                </div>
+                <Input
+                  name="anhbia"
+                  value={formData.anhbia}
+                  onChange={handleChange}
+                  placeholder="https://... hoặc /uploads/campaigns/..."
+                  helpText="Ảnh tải lên từ máy sẽ được lưu trực tiếp trên máy chủ Backend"
+                />
+              </div>
 
               <div className="textarea-wrap">
                 <label className="input-label">
@@ -222,7 +261,7 @@ const CampaignCreate = () => {
             <div className="preview-card-wrap">
               <div className="preview-img-box">
                 <img
-                  src={formData.anhbia || 'https://placehold.co/600x400?text=Chua+co+anh'}
+                  src={formatImageUrl(formData.anhbia, 'https://placehold.co/600x400?text=Chua+co+anh')}
                   alt="Ảnh bìa"
                   onError={(e) => {
                     e.target.src = 'https://placehold.co/600x400?text=Loi+Anh';

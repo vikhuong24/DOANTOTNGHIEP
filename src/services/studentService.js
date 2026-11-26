@@ -133,10 +133,26 @@ export const getStudentsByParent = getParentStudents;
 
 /**
  * Phụ huynh xem lịch sử nhận hỗ trợ của con
+ * Endpoint: GET /parent/students/{mahocsinh}/history
  */
 export const getStudentSupportHistory = async (mahocsinh) => {
   const res = await api.get(`/parent/students/${mahocsinh}/history`);
-  return unwrapList(res);
+  const list = unwrapList(res);
+  return list.map((item) => ({
+    ...item,
+    id: item.maChiTietPhanBo || item.maDotPhanBo || item.id,
+    maChiTietPhanBo: item.maChiTietPhanBo,
+    maDotPhanBo: item.maDotPhanBo,
+    tenDotPhanBo: item.tenDotPhanBo || item.tenDot || 'Đợt phân bổ hỗ trợ',
+    maBaiTaiTro: item.maBaiTaiTro,
+    tieuDeBaiTaiTro: item.tieuDeBaiTaiTro || '',
+    soTien: item.soTien !== null && item.soTien !== undefined ? Number(item.soTien) : 0,
+    nguoiNhan: item.nguoiNhan || '',
+    ngayNhan: item.ngayNhan,
+    ghiChu: item.ghiChu || '',
+    trangThaiDotPhanBo: item.trangThaiDotPhanBo || 'DATRAO',
+    ngayTrao: item.ngayTrao,
+  }));
 };
 
 /**

@@ -1,9 +1,9 @@
 // Trang Gửi và Theo dõi phản hồi sai lệch cho Phụ huynh
+// Kết nối trực tiếp API Backend Spring Boot: GET /parent/feedbacks & POST /parent/feedbacks
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useAuth } from '../../../../contexts/AuthContext';
-import { getStudentsByParent } from '../../../../services/studentService';
-import { getFeedbacksByUser, createFeedback } from '../../../../services/feedbackService';
+import { getParentStudents } from '../../../../services/studentService';
+import { getParentFeedbacks, createParentFeedback } from '../../../../services/feedbackService';
 import Card from '../../../../components/Card/Card';
 import Input from '../../../../components/Input/Input';
 import Button from '../../../../components/Button/Button';
@@ -11,7 +11,7 @@ import Loading from '../../../../components/Loading/Loading';
 import EmptyState from '../../../../components/EmptyState/EmptyState';
 import { useNotification } from '../../../../components/Notification/Notification';
 import { formatDate } from '../../../../utils/formatters';
-import { FiSend, FiMessageSquare, FiClock, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import { FiSend, FiMessageSquare, FiClock, FiCheckCircle, FiAlertCircle, FiXCircle } from 'react-icons/fi';
 import './Feedback.css';
 
 const REASON_OPTIONS = [
@@ -23,7 +23,6 @@ const REASON_OPTIONS = [
 ];
 
 const Feedback = () => {
-  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const { addToast } = useNotification();
 
@@ -33,40 +32,48 @@ const Feedback = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const initialStudentId = searchParams.get('studentId') || '';
+  const initialDistributionId = searchParams.get('distributionId') || '';
+  const initialCampaignId = searchParams.get('campaignId') || '';
   const initialNote = searchParams.get('note') || '';
 
   const [formData, setFormData] = useState({
     maHocSinh: initialStudentId,
+    maDotPhanBo: initialDistributionId,
+    maBaiTaiTro: initialCampaignId,
     lyDo: REASON_OPTIONS[0],
-    tieuDe: initialNote ? `Phản hồi: ${initialNote}` : '',
+    tieuDe: initialNote ? `Phản hồi: ${initialNote}`.slice(0, 255) : '',
     noiDung: '',
   });
 
   const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const parentId = user?.maNguoiDung || 2;
-        const [studentList, fbList] = await Promise.all([
-          getStudentsByParent(parentId),
-          getFeedbacksByUser(parentId),
-        ]);
-        setStudents(studentList || []);
-        setFeedbacks(fbList?.data || fbList || []);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [studentList, fbList] = await Promise.all([
+        getParentStudents().catch(() => []),
+        getParentFeedbacks(),
+      ]);
+      setStudents(studentList || []);
+      setFeedbacks(fbList || []);
 
-        if (!formData.maHocSinh && studentList && studentList.length > 0) {
-          setFormData((prev) => ({ ...prev, maHocSinh: studentList[0].mahocsinh }));
-        }
-      } catch (err) {
-        console.error('Lỗi khi tải dữ liệu phản hồi:', err);
-      } finally {
-        setLoading(false);
+      if (!formData.maHocSinh && studentList && studentList.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          maHocSinh: studentList[0].maHocSinh || studentList[0].mahocsinh,
+        }));
       }
-    };
+    } catch (err) {
+      console.error('Lỗi khi tải dữ liệu phản hồi:', err);
+      addToast(err?.message || 'Không thể tải danh sách phản hồi từ máy chủ', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
-  }, [user]);
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -77,8 +84,22 @@ const Feedback = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const newErrors = {};
-    if (!formData.tieuDe.trim()) newErrors.tieuDe = 'Vui lòng nhập tiêu đề phản ánh';
-    if (!formData.noiDung.trim()) newErrors.noiDung = 'Vui lòng mô tả chi tiết sự việc hoặc thắc mắc';
+    const titleTrimmed = formData.tieuDe.trim();
+    const contentTrimmed = formData.noiDung.trim();
+
+    if (!titleTrimmed) {
+      newErrors.tieuDe = 'Vui lòng nhập tiêu đề phản ánh';
+    } else if (titleTrimmed.length < 5) {
+      newErrors.tieuDe = 'Tiêu đề phản ánh phải từ 5 ký tự trở lên';
+    } else if (titleTrimmed.length > 255) {
+      newErrors.tieuDe = 'Tiêu đề phản ánh không vượt quá 255 ký tự';
+    }
+
+    if (!contentTrimmed) {
+      newErrors.noiDung = 'Vui lòng mô tả chi tiết sự việc hoặc thắc mắc';
+    } else if (contentTrimmed.length < 10) {
+      newErrors.noiDung = 'Nội dung phản ánh phải có tối thiểu 10 ký tự';
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -87,31 +108,61 @@ const Feedback = () => {
 
     try {
       setSubmitting(true);
-      const studentObj = students.find((s) => s.mahocsinh === Number(formData.maHocSinh));
+      const studentObj = students.find(
+        (s) => Number(s.maHocSinh || s.mahocsinh) === Number(formData.maHocSinh)
+      );
+      const studentLabel = studentObj
+        ? `[Học sinh: ${studentObj.hoTen || studentObj.hoten} - Lớp: ${studentObj.lop}] `
+        : '';
+      const fullContent = `${studentLabel}[Vấn đề: ${formData.lyDo}]\n\n${contentTrimmed}`.slice(0, 2000);
+
       const payload = {
-        maNguoiDung: user?.maNguoiDung || 2,
-        tenNguoiGui: user?.hoten || 'Phụ huynh học sinh',
-        tieuDe: formData.tieuDe,
-        noiDung: `[Học sinh: ${studentObj?.hoten || 'N/A'} - Lớp: ${studentObj?.lop || 'N/A'}] [Lý do: ${formData.lyDo}] \n\n${formData.noiDung}`,
-        loaiNguoiDung: 'PH',
-        ngayGui: new Date().toISOString(),
-        trangThai: 'ChoXuLy',
+        maBaiTaiTro: formData.maBaiTaiTro ? Number(formData.maBaiTaiTro) : null,
+        maDotPhanBo: formData.maDotPhanBo ? Number(formData.maDotPhanBo) : null,
+        tieuDe: titleTrimmed,
+        noiDung: fullContent,
       };
 
-      const res = await createFeedback(payload);
+      const res = await createParentFeedback(payload);
       addToast('Phản ánh của bạn đã được gửi thành công đến Nhà trường', 'success');
       setFeedbacks((prev) => [res, ...prev]);
       setFormData({
-        maHocSinh: students[0]?.mahocsinh || '',
+        maHocSinh: students[0]?.maHocSinh || students[0]?.mahocsinh || '',
+        maDotPhanBo: '',
+        maBaiTaiTro: '',
         lyDo: REASON_OPTIONS[0],
         tieuDe: '',
         noiDung: '',
       });
     } catch (err) {
-      addToast(err.message || 'Không thể gửi phản ánh, vui lòng thử lại sau', 'error');
+      const msg = err?.response?.data?.message || err?.message || 'Không thể gửi phản ánh, vui lòng thử lại sau';
+      addToast(msg, 'error');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const renderStatusBadge = (status) => {
+    const s = String(status || '').toUpperCase();
+    if (s === 'DAXULY' || s === 'DAGIAIQUYET' || s === 'DAPHANHOI') {
+      return (
+        <span className="badge-status badge-success">
+          <FiCheckCircle /> Đã phản hồi
+        </span>
+      );
+    }
+    if (s === 'TUCHOI') {
+      return (
+        <span className="badge-status badge-danger">
+          <FiXCircle /> Không tiếp nhận
+        </span>
+      );
+    }
+    return (
+      <span className="badge-status badge-pending">
+        <FiClock /> Đang xử lý
+      </span>
+    );
   };
 
   if (loading) {
@@ -131,27 +182,32 @@ const Feedback = () => {
         {/* Form gửi phản hồi */}
         <div className="feedback-form-col">
           <Card title="Gửi phản ánh mới">
-            <form onSubmit={handleSubmit} className="feedback-form">
-              <div className="input-wrap">
-                <label className="input-label" htmlFor="maHocSinh">
-                  Chọn học sinh liên quan <span className="input-required">*</span>
-                </label>
-                <div className="input-field-wrap">
-                  <select
-                    id="maHocSinh"
-                    name="maHocSinh"
-                    className="input-field"
-                    value={formData.maHocSinh}
-                    onChange={handleChange}
-                  >
-                    {students.map((st) => (
-                      <option key={st.mahocsinh} value={st.mahocsinh}>
-                        {st.hoten} - Lớp {st.lop} ({st.loaihotro})
-                      </option>
-                    ))}
-                  </select>
+            <form onSubmit={handleSubmit} className="feedback-form" noValidate>
+              {students.length > 0 && (
+                <div className="input-wrap">
+                  <label className="input-label" htmlFor="maHocSinh">
+                    Chọn học sinh liên quan <span className="input-required">*</span>
+                  </label>
+                  <div className="input-field-wrap">
+                    <select
+                      id="maHocSinh"
+                      name="maHocSinh"
+                      className="input-field"
+                      value={formData.maHocSinh}
+                      onChange={handleChange}
+                    >
+                      {students.map((st) => {
+                        const stId = st.maHocSinh || st.mahocsinh;
+                        return (
+                          <option key={stId} value={stId}>
+                            {st.hoTen || st.hoten} - {st.lop} ({st.loaiHoTro || st.loaihotro || 'Học sinh'})
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="input-wrap">
                 <label className="input-label" htmlFor="lyDo">
@@ -182,6 +238,7 @@ const Feedback = () => {
                 placeholder="Ví dụ: Chưa nhận tiền học bổng Đợt 1 / Sai số tiền thực tế..."
                 error={errors.tieuDe}
                 required
+                helpText="Từ 5 đến 255 ký tự"
               />
 
               <Input
@@ -194,6 +251,7 @@ const Feedback = () => {
                 placeholder="Mô tả cụ thể sự việc, ngày nhận, số tiền hoặc đồ dùng thực tế đã nhận được so với thông báo..."
                 error={errors.noiDung}
                 required
+                helpText="Tối thiểu 10 ký tự"
               />
 
               <div className="form-submit-row">
@@ -212,7 +270,7 @@ const Feedback = () => {
 
         {/* Lịch sử phản hồi đã gửi */}
         <div className="feedback-history-col">
-          <Card title="Phản hồi đã gửi gần đây">
+          <Card title={`Phản hồi đã gửi gần đây (${feedbacks.length})`}>
             {feedbacks.length === 0 ? (
               <EmptyState
                 icon={<FiMessageSquare size={40} />}
@@ -221,45 +279,53 @@ const Feedback = () => {
               />
             ) : (
               <div className="feedback-cards-list">
-                {feedbacks.map((item, idx) => (
-                  <div key={item.maPhanHoi || idx} className="feedback-item-card">
-                    <div className="feedback-item-header">
-                      <span className="feedback-item-title">{item.tieuDe || 'Phản ánh thông tin'}</span>
-                      <span
-                        className={`badge-status ${
-                          item.trangThai === 'DaGiaiQuyet' || item.trangThai === 'DaPhanHoi'
-                            ? 'badge-success'
-                            : 'badge-pending'
-                        }`}
-                      >
-                        {item.trangThai === 'DaGiaiQuyet' || item.trangThai === 'DaPhanHoi' ? (
-                          <>
-                            <FiCheckCircle /> Đã phản hồi
-                          </>
-                        ) : (
-                          <>
-                            <FiClock /> Đang xử lý
-                          </>
-                        )}
-                      </span>
-                    </div>
-
-                    <p className="feedback-item-desc">{item.noiDung}</p>
-
-                    <div className="feedback-item-date">
-                      Gửi lúc: {formatDate(item.ngayGui || new Date().toISOString())}
-                    </div>
-
-                    {item.traLoi && (
-                      <div className="feedback-reply-box">
-                        <div className="reply-author">
-                          <FiAlertCircle /> <strong>Phản hồi từ Nhà trường:</strong>
+                {feedbacks.map((item, idx) => {
+                  const replyContent = item.noiDungTraLoi || item.noidungtraloi || item.traLoi;
+                  return (
+                    <div key={item.maPhanHoi || idx} className="feedback-item-card">
+                      <div className="feedback-item-header">
+                        <div>
+                          <span className="feedback-item-title">{item.tieuDe || 'Phản ánh thông tin'}</span>
+                          {(item.tenDotPhanBo || item.tieuDeBaiTaiTro) && (
+                            <div style={{ fontSize: '0.78rem', color: 'var(--primary)', marginTop: '2px' }}>
+                              {item.tenDotPhanBo ? `Đợt: ${item.tenDotPhanBo}` : ''}
+                              {item.tenDotPhanBo && item.tieuDeBaiTaiTro ? ' • ' : ''}
+                              {item.tieuDeBaiTaiTro ? `Chiến dịch: ${item.tieuDeBaiTaiTro}` : ''}
+                            </div>
+                          )}
                         </div>
-                        <p className="reply-content">{item.traLoi}</p>
+                        {renderStatusBadge(item.trangThai)}
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      <p className="feedback-item-desc" style={{ whiteSpace: 'pre-line' }}>
+                        {item.noiDung}
+                      </p>
+
+                      <div className="feedback-item-date">
+                        Gửi lúc: {item.ngayGui ? formatDate(item.ngayGui) : '—'}
+                      </div>
+
+                      {replyContent && (
+                        <div className="feedback-reply-box">
+                          <div className="reply-author">
+                            <FiAlertCircle />{' '}
+                            <strong>
+                              {item.tenCanBoTraLoi
+                                ? `Cán bộ ${item.tenCanBoTraLoi} trả lời:`
+                                : 'Phản hồi từ Nhà trường:'}
+                            </strong>
+                            {item.ngayTraLoi && (
+                              <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#888' }}>
+                                ({formatDate(item.ngayTraLoi)})
+                              </span>
+                            )}
+                          </div>
+                          <p className="reply-content">{replyContent}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </Card>

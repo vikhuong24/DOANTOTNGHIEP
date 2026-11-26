@@ -10,7 +10,9 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import { useNotification } from '../../../../components/Notification/Notification';
 import { getAllCampaigns, getCampaignById } from '../../../../services/campaignService';
 import { registerDonation } from '../../../../services/donationService';
+import { uploadImage } from '../../../../services/fileService';
 import { formatCurrency } from '../../../../utils/formatCurrency';
+import { formatImageUrl } from '../../../../utils/formatters';
 import './RegisterSponsor.css';
 
 const QUICK_AMOUNTS = [100000, 200000, 500000, 1000000, 2000000, 5000000];
@@ -27,6 +29,7 @@ const RegisterSponsor = () => {
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
   const [successInfo, setSuccessInfo] = useState(null);
 
   // Form state
@@ -96,21 +99,37 @@ const RegisterSponsor = () => {
     }
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setErrors((prev) => ({ ...prev, anhGiaoDich: 'Kích thước file ảnh tối đa 5MB' }));
-        return;
-      }
+    if (!file) return;
 
-      // Tạo object URL để preview an toàn
-      const objectUrl = URL.createObjectURL(file);
-      setAnhPreview(objectUrl);
-      const safeName = `receipts/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '')}`.slice(0, 250);
-      setReceiptFileName(safeName);
-      setAnhGiaoDichUrl('');
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, anhGiaoDich: 'Kích thước file ảnh tối đa 5MB' }));
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setAnhPreview(objectUrl);
+    setUploadingReceipt(true);
+    try {
+      const uploaded = await uploadImage(file, 'receipts');
+      if (uploaded?.url) {
+        setReceiptFileName(uploaded.url);
+        setAnhPreview(formatImageUrl(uploaded.url));
+        setAnhGiaoDichUrl('');
+        addToast('Tải lên ảnh biên lai thành công!', 'success');
+      }
       if (errors.anhGiaoDich) setErrors((prev) => ({ ...prev, anhGiaoDich: null }));
+    } catch (err) {
+      setAnhPreview('');
+      setReceiptFileName('');
+      setErrors((prev) => ({
+        ...prev,
+        anhGiaoDich: err?.message || 'Không thể tải ảnh biên lai lên máy chủ',
+      }));
+      addToast(err?.message || 'Lỗi khi tải ảnh biên lai lên máy chủ', 'error');
+    } finally {
+      setUploadingReceipt(false);
     }
   };
 
@@ -421,13 +440,13 @@ const RegisterSponsor = () => {
               Ảnh chụp giao dịch / Biên lai chuyển khoản (Tùy chọn)
             </label>
             <div className="receipt-upload-container">
-              <label className="receipt-upload-btn" style={{ cursor: isCampaignEnded ? 'not-allowed' : 'pointer' }}>
-                <FiUpload /> Chọn ảnh biên lai từ máy
+              <label className="receipt-upload-btn" style={{ cursor: isCampaignEnded || uploadingReceipt ? 'not-allowed' : 'pointer' }}>
+                <FiUpload /> {uploadingReceipt ? 'Đang tải ảnh lên...' : 'Chọn ảnh biên lai từ máy'}
                 <input
                   type="file"
                   accept="image/png, image/jpeg, image/webp"
                   onChange={handleFileUpload}
-                  disabled={isCampaignEnded}
+                  disabled={isCampaignEnded || uploadingReceipt}
                   style={{ display: 'none' }}
                 />
               </label>

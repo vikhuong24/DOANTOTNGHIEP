@@ -248,15 +248,22 @@ const CampaignProgress = () => {
                   {selectedCamp.danhSachMinhChung.map((evi) => (
                     <div key={evi.maMinhChung} className="evidence-thumb-item">
                       <div className="evidence-thumb-img-wrap">
-                        {evi.duongDanTep && (evi.duongDanTep.endsWith('.pdf') || evi.loaiTaiLieu === 'HOADON' || evi.loaiTaiLieu === 'CHUNG_TU') ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--primary)' }}>
+                        {evi.duongDanTep && evi.duongDanTep.toLowerCase().endsWith('.pdf') ? (
+                          <div
+                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--primary)', cursor: 'pointer' }}
+                            onClick={() => window.open(evi.duongDanTep, '_blank', 'noopener,noreferrer')}
+                          >
                             <FiFileText size={36} />
-                            <span style={{ fontSize: '0.75rem', marginTop: '4px' }}>Chứng từ PDF / Tài liệu</span>
+                            <span style={{ fontSize: '0.75rem', marginTop: '4px' }}>Xem tài liệu PDF</span>
                           </div>
                         ) : (
                           <img
-                            src={evi.duongDanTep || 'https://images.unsplash.com/photo-1577495508048-b635879837f1?w=400'}
+                            src={evi.duongDanTep || '/images/minhchungmau.jpg'}
                             alt={evi.moTa}
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = '/images/minhchungmau.jpg';
+                            }}
                           />
                         )}
                       </div>

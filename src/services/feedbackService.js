@@ -29,6 +29,9 @@ const normalizeFeedback = (f) => {
     mabaitaitro: f.mabaitaitro || f.maBaiTaiTro,
     maBaiTaiTro: f.mabaitaitro || f.maBaiTaiTro,
     tieuDeBaiTaiTro: f.tieuDeBaiTaiTro || f.tieude || '',
+    madotphanbo: f.madotphanbo || f.maDotPhanBo,
+    maDotPhanBo: f.madotphanbo || f.maDotPhanBo,
+    tenDotPhanBo: f.tenDotPhanBo || '',
     macanbo: f.macanbo || f.maCanBo,
     maCanBo: f.macanbo || f.maCanBo,
     tenCanBoTraLoi: f.tenCanBoTraLoi || '',
@@ -145,6 +148,7 @@ export const createParentFeedback = async (data) => {
     tieuDe: String(data.tieuDe || data.tieude || '').trim(),
     noiDung: String(data.noiDung || data.noidung || '').trim(),
     maBaiTaiTro: data.maBaiTaiTro ? Number(data.maBaiTaiTro) : null,
+    maDotPhanBo: data.maDotPhanBo ? Number(data.maDotPhanBo) : null,
   };
   const res = await api.post('/parent/feedbacks', payload);
   return normalizeFeedback(unwrap(res));

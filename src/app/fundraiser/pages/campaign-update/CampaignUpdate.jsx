@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getCampaigns, updateCampaign } from '../../../../services/campaignService';
+import { uploadImage } from '../../../../services/fileService';
 import Card from '../../../../components/Card/Card';
 import Table from '../../../../components/Table/Table';
 import Button from '../../../../components/Button/Button';
@@ -12,9 +13,9 @@ import Tabs from '../../../../components/Tabs/Tabs';
 import Loading from '../../../../components/Loading/Loading';
 import ProgressBar from '../../../../components/ProgressBar/ProgressBar';
 import { useNotification } from '../../../../components/Notification/Notification';
-import { formatDate, formatCurrency } from '../../../../utils/formatters';
+import { formatDate, formatCurrency, formatImageUrl } from '../../../../utils/formatters';
 import { CAMPAIGN_STATUS_LABELS } from '../../../../utils/constants';
-import { FiEdit2, FiExternalLink, FiPlus, FiBarChart2 } from 'react-icons/fi';
+import { FiEdit2, FiExternalLink, FiPlus, FiBarChart2, FiUpload } from 'react-icons/fi';
 import './CampaignUpdate.css';
 
 const TABS = [
@@ -47,6 +48,28 @@ const CampaignUpdate = () => {
     trangthai: '',
   });
   const [saving, setSaving] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      addToast('Kích thước ảnh bìa tối đa 5MB', 'warning');
+      return;
+    }
+    try {
+      setUploadingCover(true);
+      const uploaded = await uploadImage(file, 'campaigns');
+      if (uploaded?.url) {
+        setEditForm((prev) => ({ ...prev, anhbia: uploaded.url }));
+        addToast('Tải lên ảnh bìa mới thành công!', 'success');
+      }
+    } catch (err) {
+      addToast(err?.message || 'Không thể tải ảnh bìa lên máy chủ', 'error');
+    } finally {
+      setUploadingCover(false);
+    }
+  };
 
   const fetchList = async () => {
     try {
@@ -331,11 +354,33 @@ const CampaignUpdate = () => {
             />
           </div>
 
-          <Input
-            label="Đường dẫn ảnh bìa"
-            value={editForm.anhbia}
-            onChange={(e) => setEditForm({ ...editForm, anhbia: e.target.value })}
-          />
+          <div className="input-wrap">
+            <label className="input-label">Ảnh bìa chiến dịch</label>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <label className="btn btn--outline btn--sm" style={{ cursor: uploadingCover ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <FiUpload /> {uploadingCover ? 'Đang tải lên...' : 'Chọn ảnh mới từ máy'}
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp"
+                  onChange={handleCoverUpload}
+                  disabled={uploadingCover}
+                  style={{ display: 'none' }}
+                />
+              </label>
+              {editForm.anhbia && (
+                <img
+                  src={formatImageUrl(editForm.anhbia)}
+                  alt="Preview"
+                  style={{ height: '36px', width: '54px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd' }}
+                />
+              )}
+            </div>
+            <Input
+              value={editForm.anhbia}
+              onChange={(e) => setEditForm({ ...editForm, anhbia: e.target.value })}
+              placeholder="https://... hoặc /uploads/campaigns/..."
+            />
+          </div>
 
           <Input
             type="textarea"

@@ -1,6 +1,7 @@
 // Service quản lý tài trợ / quyên góp - Kết nối trực tiếp API Backend Spring Boot
 import api, { unwrap, unwrapList } from './api';
 import { DONATION_STATUS } from '../utils/constants';
+import { formatImageUrl } from '../utils/formatters';
 
 /**
  * Chuẩn hóa bản ghi tài trợ hoặc bản ghi sao kê
@@ -90,13 +91,16 @@ export const getCampaignsProgress = async () => {
     ...item,
     maBaiTaiTro: item.maBaiTaiTro || item.id,
     tieuDe: item.tieuDe || item.tieude || '',
-    anhBia: item.anhBia || item.anhbia || '',
+    anhBia: formatImageUrl(item.anhBia || item.anhbia),
     mucTieu: Number(item.mucTieu || item.muctieu || 0),
     tongTienDaNhan: Number(item.tongTienDaNhan || item.tongtienDaNhan || 0),
     phanTramHoanThanh: Number(item.phanTramHoanThanh ?? 0),
     trangThai: item.trangThai || item.trangthai || 'DADUYET',
     tongTienToiDaDongGop: Number(item.tongTienToiDaDongGop ?? 0),
-    danhSachMinhChung: item.danhSachMinhChung || [],
+    danhSachMinhChung: (item.danhSachMinhChung || []).map((m) => ({
+      ...m,
+      duongDanTep: formatImageUrl(m.duongDanTep, '/images/minhchungmau.jpg'),
+    })),
   }));
 };
 
@@ -118,7 +122,7 @@ export const getDonationHistory = async () => {
     tenHienThi: t.tenHienThi || 'Nhà hảo tâm ẩn danh',
     soTienDk: Number(t.soTienDk || 0),
     soTienTt: t.soTienTt !== null && t.soTienTt !== undefined ? Number(t.soTienTt) : null,
-    anhGiaoDich: t.anhGiaoDich || null,
+    anhGiaoDich: t.anhGiaoDich ? formatImageUrl(t.anhGiaoDich, '/images/minhchungmau.jpg') : null,
     trangThai: t.trangThai || 'CHODUYET',
     ghiChu: t.ghiChu || '',
     ngayGui: t.ngayGui,

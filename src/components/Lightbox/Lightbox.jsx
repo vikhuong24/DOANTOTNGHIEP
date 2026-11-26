@@ -40,10 +40,14 @@ const Lightbox = ({ images = [], initialIndex = 0, onClose }) => {
         </button>
         <div className="lightbox-image-wrap">
           <img
-            src={images[current]?.src || images[current]}
+            src={images[current]?.src || images[current] || '/images/minhchungmau.jpg'}
             alt={images[current]?.alt || `Ảnh ${current + 1}`}
             style={{ transform: `scale(${scale})` }}
             className="lightbox-image"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/images/minhchungmau.jpg';
+            }}
           />
         </div>
         <button className="lightbox-nav lightbox-nav--next" onClick={goNext} disabled={images.length <= 1}>
