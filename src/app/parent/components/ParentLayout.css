@@ -1,28 +1,42 @@
 /* ParentLayout styling */
 .parent-layout {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background-color: var(--bg);
+  overflow: hidden;
 }
 
 .parent-body {
   display: flex;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .parent-main {
   flex: 1;
+  min-width: 0;
+  height: 100%;
   padding: 1.5rem 2rem;
   overflow-y: auto;
-  max-width: 1400px;
-  width: 100%;
-  margin: 0 auto;
+  overflow-x: hidden;
   box-sizing: border-box;
 }
 
 @media (max-width: 768px) {
+  .parent-layout {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+  .parent-body {
+    flex-direction: column;
+    overflow: visible;
+  }
   .parent-main {
+    height: auto;
     padding: 1rem;
+    overflow: visible;
   }
 }

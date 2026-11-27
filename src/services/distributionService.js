@@ -3,12 +3,39 @@ import api, { unwrap, unwrapList } from './api';
 import { DISTRIBUTION_STATUS } from '../utils/constants';
 
 /**
+ * Chuyển đổi ngày YYYY-MM-DD hoặc ISO sang LocalDateTime (YYYY-MM-DDTHH:mm:ss)
+ */
+const toLocalDateTime = (val) => {
+  if (!val) return null;
+  const s = String(val).trim();
+  if (!s) return null;
+  if (s.includes('T')) {
+    return s.length === 16 ? `${s}:00` : s.slice(0, 19);
+  }
+  return `${s}T09:00:00`;
+};
+
+/**
  * Chuẩn hóa đối tượng đợt phân bổ
  */
 const normalizeDistribution = (d) => {
   if (!d) return null;
   const id = d.madotphanbo || d.maDotPhanBo || d.id;
-  const status = d.trangthai || d.trangThai || DISTRIBUTION_STATUS.CHODUYET;
+  const status = String(d.trangthai || d.trangThai || DISTRIBUTION_STATUS.CHODUYET).toUpperCase();
+  const details = Array.isArray(d.chiTietPhanBo)
+    ? d.chiTietPhanBo.map((ct) => ({
+        ...ct,
+        maChiTietPhanBo: ct.maChiTietPhanBo,
+        maHocSinh: ct.maHocSinh,
+        tenHocSinh: ct.tenHocSinh || '',
+        lop: ct.lop || '',
+        soTien: Number(ct.soTien ?? 0),
+        nguoiNhan: ct.nguoiNhan || '',
+        ngayNhan: ct.ngayNhan,
+        ghiChu: ct.ghiChu || '',
+      }))
+    : [];
+
   return {
     ...d,
     id,
@@ -18,6 +45,7 @@ const normalizeDistribution = (d) => {
     tenDot: d.tendot || d.tenDot || '',
     mabaitaitro: d.mabaitaitro || d.maBaiTaiTro,
     maBaiTaiTro: d.mabaitaitro || d.maBaiTaiTro,
+    tieuDeBaiTaiTro: d.tieuDeBaiTaiTro || '',
     tongtien: Number(d.tongtien ?? d.tongTien ?? 0),
     tongTien: Number(d.tongtien ?? d.tongTien ?? 0),
     trangthai: status,
@@ -25,6 +53,9 @@ const normalizeDistribution = (d) => {
     status,
     ngaytrao: d.ngaytrao || d.ngayTrao,
     ngayTrao: d.ngaytrao || d.ngayTrao,
+    tenCanBo: d.tenCanBo || '',
+    tenHieuTruong: d.tenHieuTruong || '',
+    chiTietPhanBo: details,
   };
 };
 
@@ -63,24 +94,31 @@ export const getDistributionsByStudent = async (mahocsinh) => {
 
 /**
  * Cán bộ tạo đợt phân bổ mới
+ * Endpoint: POST /fundraiser/distributions
+ * Payload (CreateDistributionRequest): { maBaiTaiTro, tenDot, ngayTrao, chiTietPhanBo: [{ maHocSinh, soTien, nguoiNhan, ghiChu }] }
  */
 export const createDistribution = async (data) => {
   const payload = {
     maBaiTaiTro: Number(data.maBaiTaiTro || data.mabaitaitro),
-    tenDot: data.tenDot || data.tendot,
-    tongTien: Number(data.tongTien || data.tongtien || 0),
-    ngayTrao: data.ngayTrao || data.ngaytrao,
-    chiTiet: data.chiTiet || data.danhSachHocSinh || [],
+    tenDot: String(data.tenDot || data.tendot || '').trim(),
+    ngayTrao: toLocalDateTime(data.ngayTrao || data.ngaytrao),
+    chiTietPhanBo: (data.chiTietPhanBo || []).map((item) => ({
+      maHocSinh: Number(item.maHocSinh),
+      soTien: Number(item.soTien),
+      nguoiNhan: item.nguoiNhan ? String(item.nguoiNhan).trim() : null,
+      ghiChu: item.ghiChu ? String(item.ghiChu).trim() : null,
+    })),
   };
   const res = await api.post('/fundraiser/distributions', payload);
   return normalizeDistribution(unwrap(res));
 };
 
 /**
- * Cán bộ giải ngân / trao quà cho học sinh
+ * Cán bộ xác nhận đã hoàn tất giải ngân / trao quà (DADUYET -> DATRAO)
+ * Endpoint: PUT /fundraiser/distributions/{id}/disburse
  */
-export const disburseDistribution = async (id, data = {}) => {
-  const res = await api.put(`/fundraiser/distributions/${id}/disburse`, data);
+export const disburseDistribution = async (id) => {
+  const res = await api.put(`/fundraiser/distributions/${id}/disburse`);
   return normalizeDistribution(unwrap(res));
 };
 

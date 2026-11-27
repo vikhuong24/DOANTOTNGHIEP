@@ -20,12 +20,15 @@ const normalizeFeedback = (f) => {
     noiDung: f.noidung || f.noiDung || '',
     noidungtraloi: f.noidungtraloi || f.noiDungTraLoi || '',
     noiDungTraLoi: f.noidungtraloi || f.noiDungTraLoi || '',
+    traLoi: f.noidungtraloi || f.noiDungTraLoi || f.traLoi || '',
     trangthai: status,
     trangThai: status,
     status,
     manguoidung: f.manguoidung || f.maNguoiDung,
     maNguoiDung: f.manguoidung || f.maNguoiDung,
     tenNguoiGui: f.tenNguoiGui || f.tenhienthi || `Người dùng #${f.manguoidung || f.maNguoiDung || ''}`,
+    emailNguoiGui: f.emailNguoiGui || f.email || '',
+    sdtNguoiGui: f.sdtNguoiGui || f.sdt || '',
     mabaitaitro: f.mabaitaitro || f.maBaiTaiTro,
     maBaiTaiTro: f.mabaitaitro || f.maBaiTaiTro,
     tieuDeBaiTaiTro: f.tieuDeBaiTaiTro || f.tieude || '',
@@ -34,26 +37,41 @@ const normalizeFeedback = (f) => {
     tenDotPhanBo: f.tenDotPhanBo || '',
     macanbo: f.macanbo || f.maCanBo,
     maCanBo: f.macanbo || f.maCanBo,
-    tenCanBoTraLoi: f.tenCanBoTraLoi || '',
+    tenCanBo: f.tenCanBo || f.tenCanBoTraLoi || '',
+    tenCanBoTraLoi: f.tenCanBo || f.tenCanBoTraLoi || '',
     ngaygui: f.ngaygui || f.ngayGui,
     ngayGui: f.ngaygui || f.ngayGui,
-    ngaytraloi: f.ngaytraloi || f.ngayTraLoi,
-    ngayTraLoi: f.ngaytraloi || f.ngayTraLoi,
+    ngaytraloi: f.ngaytraloi || f.ngayTraLoi || f.ngayTrao || null,
+    ngayTraLoi: f.ngaytraloi || f.ngayTraLoi || f.ngayTrao || null,
   };
 };
 
 /**
  * Cán bộ lấy danh sách phản hồi từ phụ huynh và nhà tài trợ
+ * GET /fundraiser/feedbacks?trangThai=...
  */
-export const getFundraiserFeedbacks = async () => {
+export const getFundraiserFeedbacks = async (trangThai) => {
   try {
-    const res = await api.get('/fundraiser/feedbacks');
+    const params = {};
+    if (trangThai && trangThai !== 'ALL') {
+      params.trangThai = trangThai;
+    }
+    const res = await api.get('/fundraiser/feedbacks', { params });
     const list = unwrapList(res);
     return list.map(normalizeFeedback);
   } catch (err) {
     console.error('Lỗi khi lấy danh sách phản hồi cán bộ:', err);
     throw err;
   }
+};
+
+/**
+ * Cán bộ xem chi tiết phản hồi
+ * GET /fundraiser/feedbacks/{id}
+ */
+export const getFundraiserFeedbackDetail = async (id) => {
+  const res = await api.get(`/fundraiser/feedbacks/${id}`);
+  return normalizeFeedback(unwrap(res));
 };
 
 export const getAllFeedbacks = getFundraiserFeedbacks;

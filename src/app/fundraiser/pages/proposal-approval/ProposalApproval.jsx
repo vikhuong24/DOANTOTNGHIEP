@@ -88,6 +88,7 @@ const ProposalApproval = () => {
       addToast(`Đã phê duyệt đề xuất tài trợ #${id} thành công!`, 'success');
       setDetailModalOpen(false);
       fetchProposals();
+      window.dispatchEvent(new CustomEvent('sidebar:refresh-badges'));
     } catch (err) {
       addToast(err?.response?.data?.message || err.message || 'Không thể phê duyệt đề xuất', 'error');
     } finally {
@@ -118,6 +119,7 @@ const ProposalApproval = () => {
       setRejectModalOpen(false);
       setDetailModalOpen(false);
       fetchProposals();
+      window.dispatchEvent(new CustomEvent('sidebar:refresh-badges'));
     } catch (err) {
       addToast(err?.response?.data?.message || err.message || 'Thao tác thất bại', 'error');
     } finally {

@@ -1,6 +1,10 @@
 // Hộp thư phản hồi từ Nhà hảo tâm (Fundraiser)
-import { useState, useEffect } from 'react';
-import { getFeedbacks, replyFeedback } from '../../../../services/feedbackService';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  getFundraiserFeedbacks,
+  getFundraiserFeedbackDetail,
+  replyFeedback,
+} from '../../../../services/feedbackService';
 import Card from '../../../../components/Card/Card';
 import Table from '../../../../components/Table/Table';
 import Button from '../../../../components/Button/Button';
@@ -10,13 +14,14 @@ import Tabs from '../../../../components/Tabs/Tabs';
 import Loading from '../../../../components/Loading/Loading';
 import { useNotification } from '../../../../components/Notification/Notification';
 import { formatDate } from '../../../../utils/formatters';
-import { FiHeart, FiCornerDownRight, FiCheckCircle, FiClock, FiSend } from 'react-icons/fi';
+import { FiHeart, FiCornerDownRight, FiCheckCircle, FiClock, FiSend, FiXCircle } from 'react-icons/fi';
 import './DonorFeedback.css';
 
 const TABS = [
   { value: 'ALL', label: 'Tất cả' },
-  { value: 'ChoXuLy', label: 'Chờ giải đáp' },
-  { value: 'DaGiaiQuyet', label: 'Đã giải đáp' },
+  { value: 'CHOXULY', label: 'Chờ giải đáp' },
+  { value: 'DAXULY', label: 'Đã xử lý' },
+  { value: 'TUCHOI', label: 'Từ chối' },
 ];
 
 const DonorFeedback = () => {
@@ -25,44 +30,50 @@ const DonorFeedback = () => {
   const [feedbacks, setFeedbacks] = useState([]);
   const [activeTab, setActiveTab] = useState('ALL');
 
-  // Modal Trả lời
+  // Modal Trả lời & Chi tiết
   const [replyModalOpen, setReplyModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchFeedbacks = async () => {
+  const fetchFeedbacks = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await getFeedbacks();
-      const list = res?.data || res || [];
-      // Lọc các phản hồi từ Nhà hảo tâm
-      const donorList = list.filter(
-        (f) => f.loaiNguoiDung === 'NHT' || f.userRole === 'donor' || f.userRole === 'NHT'
-      );
+      const list = await getFundraiserFeedbacks(activeTab === 'ALL' ? undefined : activeTab);
+      const donorList = (Array.isArray(list) ? list : []).filter((f) => {
+        const role = f.loaiNguoiDung || f.userRole;
+        if (!role) return true;
+        return role === 'NHT' || role === 'donor';
+      });
       setFeedbacks(donorList);
     } catch (err) {
       console.error('Lỗi khi tải phản hồi nhà hảo tâm:', err);
+      addToast(err?.response?.data?.message || err?.message || 'Không thể tải danh sách phản hồi', 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, addToast]);
 
   useEffect(() => {
     fetchFeedbacks();
-  }, []);
+  }, [fetchFeedbacks]);
 
-  const filteredList = feedbacks.filter((item) => {
-    if (activeTab === 'ALL') return true;
-    if (activeTab === 'ChoXuLy') return item.trangThai === 'ChoXuLy' || !item.traLoi;
-    if (activeTab === 'DaGiaiQuyet') return item.trangThai === 'DaGiaiQuyet' || !!item.traLoi;
-    return true;
-  });
+  const filteredList = feedbacks;
 
-  const handleOpenReply = (item) => {
+  const handleOpenReply = async (item) => {
     setSelectedItem(item);
-    setReplyText(item.traLoi || '');
+    setReplyText(item.noiDungTraLoi || item.traLoi || '');
     setReplyModalOpen(true);
+    const id = item.maPhanHoi || item.id;
+    try {
+      const detail = await getFundraiserFeedbackDetail(id);
+      if (detail) {
+        setSelectedItem(detail);
+        setReplyText(detail.noiDungTraLoi || detail.traLoi || '');
+      }
+    } catch {
+      // Giữ dữ liệu hàng hiện tại nếu gọi detail lỗi
+    }
   };
 
   const handleSendReply = async () => {
@@ -74,12 +85,13 @@ const DonorFeedback = () => {
     const id = selectedItem.maPhanHoi || selectedItem.id;
     try {
       setSubmitting(true);
-      await replyFeedback(id, replyText);
-      addToast(`Đã gửi thư phản hồi đến Nhà hảo tâm thành công!`, 'success');
+      await replyFeedback(id, replyText.trim());
+      addToast('Đã gửi thư phản hồi thành công!', 'success');
       setReplyModalOpen(false);
       fetchFeedbacks();
+      window.dispatchEvent(new CustomEvent('sidebar:refresh-badges'));
     } catch (err) {
-      addToast(err.message || 'Lỗi khi gửi phản hồi', 'error');
+      addToast(err?.response?.data?.message || err?.message || 'Lỗi khi gửi phản hồi', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -110,11 +122,11 @@ const DonorFeedback = () => {
         <div className="feedback-content-cell">
           <div className="feedback-title-text">{row.tieuDe || 'Thư gửi ban quản lý'}</div>
           <p className="feedback-body-text">{row.noiDung}</p>
-          {row.traLoi && (
+          {row.noiDungTraLoi && (
             <div className="reply-preview-box">
               <FiCornerDownRight />
               <span>
-                <strong>Thư hồi đáp: </strong> {row.traLoi}
+                <strong>Thư hồi đáp: </strong> {row.noiDungTraLoi}
               </span>
             </div>
           )}
@@ -126,11 +138,19 @@ const DonorFeedback = () => {
       title: 'Trạng thái',
       width: '140px',
       render: (_, row) => {
-        const isAnswered = !!row.traLoi || row.trangThai === 'DaGiaiQuyet';
+        const st = String(row.trangThai || '').toUpperCase();
+        if (st === 'TUCHOI') {
+          return (
+            <span className="badge-reply badge-rejected">
+              <FiXCircle /> Từ chối
+            </span>
+          );
+        }
+        const isAnswered = st === 'DAXULY' || !!row.noiDungTraLoi;
         return (
           <span className={`badge-reply ${isAnswered ? 'badge-replied' : 'badge-waiting'}`}>
             {isAnswered ? <FiCheckCircle /> : <FiClock />}
-            {isAnswered ? 'Đã phản hồi' : 'Chờ giải đáp'}
+            {isAnswered ? 'Đã xử lý' : 'Chờ giải đáp'}
           </span>
         );
       },
@@ -142,10 +162,10 @@ const DonorFeedback = () => {
       render: (_, row) => (
         <Button
           size="sm"
-          variant={row.traLoi ? 'outline' : 'primary'}
+          variant={row.noiDungTraLoi ? 'outline' : 'primary'}
           onClick={() => handleOpenReply(row)}
         >
-          {row.traLoi ? 'Xem / Sửa' : 'Hồi đáp'}
+          {row.noiDungTraLoi ? 'Xem / Sửa' : 'Hồi đáp'}
         </Button>
       ),
     },
@@ -205,10 +225,25 @@ const DonorFeedback = () => {
           <div className="reply-dialog-body">
             <div className="original-message-card">
               <div className="orig-sender">
-                <FiHeart className="text-accent" /> Từ nhà hảo tâm: <strong>{selectedItem.tenNguoiGui}</strong>
+                <FiHeart className="text-accent" /> Từ: <strong>{selectedItem.tenNguoiGui}</strong>
+                {selectedItem.emailNguoiGui && ` (${selectedItem.emailNguoiGui})`}
+                {selectedItem.sdtNguoiGui && ` • ${selectedItem.sdtNguoiGui}`}
               </div>
+              {(selectedItem.tieuDeBaiTaiTro || selectedItem.tenDotPhanBo) && (
+                <div className="text-sm text-muted" style={{ marginBottom: 6 }}>
+                  {selectedItem.tieuDeBaiTaiTro && <span>Chiến dịch: <strong>{selectedItem.tieuDeBaiTaiTro}</strong></span>}
+                  {selectedItem.tieuDeBaiTaiTro && selectedItem.tenDotPhanBo && ' • '}
+                  {selectedItem.tenDotPhanBo && <span>Đợt phân bổ: <strong>{selectedItem.tenDotPhanBo}</strong></span>}
+                </div>
+              )}
               <div className="orig-title">{selectedItem.tieuDe}</div>
               <p className="orig-text">{selectedItem.noiDung}</p>
+              {selectedItem.tenCanBo && (
+                <div className="text-sm text-muted" style={{ marginTop: 8 }}>
+                  Cán bộ xử lý: <strong>{selectedItem.tenCanBo}</strong>
+                  {selectedItem.ngayTraLoi && ` • ${formatDate(selectedItem.ngayTraLoi)}`}
+                </div>
+              )}
             </div>
 
             <Input

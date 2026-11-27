@@ -92,6 +92,7 @@ const DistributionApproval = () => {
         )
       );
       addToast(`Đã duyệt đợt "${selected.tendot}"`, 'success');
+      window.dispatchEvent(new CustomEvent('sidebar:refresh-badges'));
       closeModal();
     } finally {
       setActionLoading(false);
@@ -108,6 +109,7 @@ const DistributionApproval = () => {
         )
       );
       addToast(`Đã từ chối đợt "${selected.tendot}"`, 'info');
+      window.dispatchEvent(new CustomEvent('sidebar:refresh-badges'));
       closeModal();
     } finally {
       setActionLoading(false);

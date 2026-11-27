@@ -3,6 +3,24 @@
   background: #1a1a1a;
   color: #ccc;
   margin-top: auto;
+  flex-shrink: 0;
+}
+
+/* Trong các trang Dashboard có Sidebar: thu gọn Footer thành thanh đáy gọn để Sidebar chạm Footer và tối ưu không gian cuộn */
+.donor-layout .footer,
+.parent-layout .footer,
+.fundraiser-layout .footer,
+.principal-layout .footer,
+.admin-layout .footer {
+  margin-top: 0;
+}
+
+.donor-layout .footer-main,
+.parent-layout .footer-main,
+.fundraiser-layout .footer-main,
+.principal-layout .footer-main,
+.admin-layout .footer-main {
+  display: none;
 }
 
 .footer-main {

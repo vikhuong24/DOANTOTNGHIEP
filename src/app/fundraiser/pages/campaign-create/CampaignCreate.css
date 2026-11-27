@@ -157,3 +157,143 @@
   line-height: 1.5;
   margin: 0;
 }
+
+.create-grid {
+  display: grid;
+  grid-template-columns: 1.7fr 1.1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 992px) {
+  .create-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-group-flex {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.two-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 640px) {
+  .two-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+.preview-card-wrap {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.preview-img-box {
+  position: relative;
+  height: 180px;
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.preview-img-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.preview-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(245, 158, 11, 0.92);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+}
+
+.preview-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.preview-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.preview-excerpt {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #666;
+  line-height: 1.5;
+}
+
+.preview-target-box {
+  background: #f0f7f4;
+  border-radius: 8px;
+  padding: 0.75rem 0.875rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.target-label {
+  font-size: 0.82rem;
+  color: #555;
+}
+
+.target-amount {
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 0.95rem;
+}
+
+.preview-footer-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: #666;
+}
+
+.submit-action-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 0.875rem;
+  margin-top: 1.25rem;
+  padding-top: 1.125rem;
+  border-top: 1px solid var(--border);
+  align-items: stretch;
+}
+
+.submit-action-buttons .btn {
+  min-height: 44px;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 520px) {
+  .submit-action-buttons {
+    grid-template-columns: 1fr;
+  }
+}

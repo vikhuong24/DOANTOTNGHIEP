@@ -9,6 +9,7 @@ import Loading from '../../../../components/Loading/Loading';
 import EmptyState from '../../../../components/EmptyState/EmptyState';
 import Lightbox from '../../../../components/Lightbox/Lightbox';
 import { useAuth } from '../../../../contexts/AuthContext';
+import { useNotification } from '../../../../components/Notification/Notification';
 import { getCampaignById } from '../../../../services/campaignService';
 import { getAllEvidences } from '../../../../services/evidenceService';
 import { formatCurrency } from '../../../../utils/formatCurrency';
@@ -19,7 +20,8 @@ import './CampaignDetail.css';
 const CampaignDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, hasRole } = useAuth();
+  const { addToast } = useNotification();
 
   const [campaign, setCampaign] = useState(null);
   const [evidences, setEvidences] = useState([]);
@@ -77,18 +79,26 @@ const CampaignDetail = () => {
   const handleRegisterSponsor = () => {
     if (!isAuthenticated) {
       navigate('/login', { state: { from: { pathname: `/donor/register-sponsor?campaignId=${id}` } } });
-    } else {
-      navigate(`/donor/register-sponsor?campaignId=${id}`);
+      return;
     }
+    if (!hasRole(['NHATAITRO', 'NHT', 'ADMIN', 'donor'])) {
+      addToast('Chức năng đăng ký tài trợ dành riêng cho tài khoản Nhà hảo tâm. Vui lòng đăng nhập bằng tài khoản Nhà hảo tâm!', 'info');
+      return;
+    }
+    navigate(`/donor/register-sponsor?campaignId=${id}`);
   };
 
   // Xử lý nút Đề xuất tài trợ
   const handleProposeSponsor = () => {
     if (!isAuthenticated) {
       navigate('/login', { state: { from: { pathname: `/donor/propose-sponsor?campaignId=${id}` } } });
-    } else {
-      navigate(`/donor/propose-sponsor?campaignId=${id}`);
+      return;
     }
+    if (!hasRole(['NHATAITRO', 'NHT', 'ADMIN', 'donor'])) {
+      addToast('Chức năng đề xuất tài trợ dành riêng cho tài khoản Nhà hảo tâm. Vui lòng đăng nhập bằng tài khoản Nhà hảo tâm!', 'info');
+      return;
+    }
+    navigate(`/donor/propose-sponsor?campaignId=${id}`);
   };
 
   // Gallery list (ảnh bìa + ảnh minh chứng)

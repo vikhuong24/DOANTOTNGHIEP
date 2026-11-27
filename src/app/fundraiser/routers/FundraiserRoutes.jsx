@@ -8,6 +8,7 @@ import SponsorApproval from '../pages/sponsor-approval/SponsorApproval';
 import DonationConfirm from '../pages/donation-confirm/DonationConfirm';
 import ScholarshipDistribution from '../pages/scholarship-distribution/ScholarshipDistribution';
 import SuppliesDistribution from '../pages/supplies-distribution/SuppliesDistribution';
+import StudentList from '../pages/student-list/StudentList';
 import DisbursementProgress from '../pages/disbursement-progress/DisbursementProgress';
 import ParentFeedback from '../pages/parent-feedback/ParentFeedback';
 import DonorFeedback from '../pages/donor-feedback/DonorFeedback';
@@ -38,6 +39,7 @@ const FundraiserRoutes = () => {
         <Route path="proposal-approval" element={<ProposalApproval />} />
         <Route path="sponsor-approval" element={<SponsorApproval />} />
         <Route path="donation-confirm" element={<DonationConfirm />} />
+        <Route path="students" element={<StudentList />} />
         <Route path="scholarship-distribution" element={<ScholarshipDistribution />} />
         <Route path="supplies-distribution" element={<SuppliesDistribution />} />
         <Route path="disbursement-progress" element={<DisbursementProgress />} />

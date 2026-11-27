@@ -32,6 +32,8 @@ export const normalizeStudent = (s) => {
     hoancanh: moTa,
     maphuhuynh: s.maPhuHuynh || s.maphuhuynh,
     maPhuHuynh: s.maPhuHuynh || s.maphuhuynh,
+    tenPhuHuynh: s.tenPhuHuynh || '',
+    sdtPhuHuynh: s.sdtPhuHuynh || '',
   };
 };
 
@@ -86,12 +88,17 @@ export const getAllStudents = async (params = {}) => {
     }
 
     const endpoint = canAccessFundraiser && !params.isGuest ? '/fundraiser/students' : '/guest/students';
-    const res = await api.get(endpoint, {
-      params: {
-        page: params.page !== undefined ? params.page : 0,
-        size: params.size || 100,
-      },
-    });
+    const queryParams =
+      endpoint === '/fundraiser/students'
+        ? {
+            keyword: params.keyword && String(params.keyword).trim() ? String(params.keyword).trim() : undefined,
+          }
+        : {
+            page: params.page !== undefined ? params.page : 0,
+            size: params.size || 100,
+          };
+
+    const res = await api.get(endpoint, { params: queryParams });
 
     const pageData = unwrap(res);
     const list = unwrapList(res);
@@ -113,7 +120,23 @@ export const getAllStudents = async (params = {}) => {
 export const getStudents = getAllStudents;
 
 /**
- * Lấy chi tiết một học sinh
+ * Cán bộ lấy danh sách học sinh (hỗ trợ tìm kiếm theo từ khóa)
+ * Endpoint: GET /fundraiser/students?keyword=...
+ * @param {string} keyword
+ */
+export const getFundraiserStudents = async (keyword = '') => {
+  const res = await api.get('/fundraiser/students', {
+    params: {
+      keyword: keyword && String(keyword).trim() ? String(keyword).trim() : undefined,
+    },
+  });
+  const list = unwrapList(res);
+  return list.map(normalizeStudent);
+};
+
+/**
+ * Lấy chi tiết một học sinh (kèm thông tin phụ huynh liên hệ)
+ * Endpoint: GET /fundraiser/students/{id}
  */
 export const getStudentById = async (id) => {
   const res = await api.get(`/fundraiser/students/${id}`);

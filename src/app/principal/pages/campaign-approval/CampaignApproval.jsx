@@ -78,6 +78,7 @@ const CampaignApproval = () => {
       await approveCampaign(selected.maBaiTaiTro, true);
       addToast(`Đã duyệt chiến dịch "${selected.tieude}"`, 'success');
       fetchData();
+      window.dispatchEvent(new CustomEvent('sidebar:refresh-badges'));
       closeModal();
     } catch {
       addToast('Có lỗi xảy ra, vui lòng thử lại', 'error');
@@ -93,6 +94,7 @@ const CampaignApproval = () => {
       await approveCampaign(selected.maBaiTaiTro, false, rejectReason);
       addToast(`Đã từ chối chiến dịch "${selected.tieude}"`, 'info');
       fetchData();
+      window.dispatchEvent(new CustomEvent('sidebar:refresh-badges'));
       closeModal();
     } catch {
       addToast('Có lỗi xảy ra, vui lòng thử lại', 'error');

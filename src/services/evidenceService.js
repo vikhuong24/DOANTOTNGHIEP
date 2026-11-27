@@ -71,11 +71,11 @@ export const createEvidence = async (data) => {
     formData.append('mota', data.moTa || data.mota);
   }
 
-  const res = await api.post('/fundraiser/evidences/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const res = await api.post('/fundraiser/evidences/upload', formData);
   return normalizeEvidence(unwrap(res));
 };
+
+export const uploadEvidence = createEvidence;
 
 /**
  * Cán bộ cập nhật toàn bộ thông tin minh chứng (file, đường dẫn, mô tả, loại tài liệu, bài đăng, đợt phân bổ)
@@ -104,9 +104,7 @@ export const updateEvidence = async (id, data = {}) => {
     }
   }
 
-  const res = await api.put(`/fundraiser/evidences/${id}`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const res = await api.put(`/fundraiser/evidences/${id}`, formData);
   return normalizeEvidence(unwrap(res));
 };
 

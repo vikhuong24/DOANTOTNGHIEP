@@ -9,83 +9,85 @@ import { useAuth } from '../../contexts/AuthContext';
 import { ROLES, ROLE_LABEL, APP_NAME, SCHOOL_NAME } from '../../utils/constants';
 import './Header.css';
 
-// Điều hướng theo role
+// Điều hướng theo role (đồng nhất tên gọi với Sidebar trên tất cả tác nhân)
 const NAV_BY_ROLE = {
   [ROLES.GUEST]: [
     { label: 'Trang chủ', to: '/campaigns' },
-    { label: 'Bài gây quỹ', to: '/campaigns' },
+    { label: 'Chiến dịch', to: '/campaigns' },
     { label: 'Sao kê', to: '/statement' },
     { label: 'Học sinh', to: '/students' },
   ],
   [ROLES.DONOR]: [
-    { label: 'Chiến dịch gây quỹ', to: '/campaigns' },
+    { label: 'Chiến dịch', to: '/campaigns' },
     { label: 'Tiến trình ủng hộ', to: '/donor/campaign-progress' },
     { label: 'Lịch sử đóng góp', to: '/donor/donation-history' },
     { label: 'Sao kê toàn trường', to: '/statement' },
   ],
   [ROLES.PARENT]: [
+    { label: 'Chiến dịch', to: '/campaigns' },
     { label: 'Lịch sử hỗ trợ', to: '/parent/student-support-history' },
-    { label: 'Minh chứng', to: '/parent/donation-evidence' },
-    { label: 'Phản hồi', to: '/parent/feedback' },
+    { label: 'Minh chứng trao quà', to: '/parent/donation-evidence' },
+    { label: 'Phản hồi sai lệch', to: '/parent/feedback' },
     { label: 'Trợ lý AI', to: '/parent/chat-assistant' },
   ],
   parent: [
+    { label: 'Chiến dịch', to: '/campaigns' },
     { label: 'Lịch sử hỗ trợ', to: '/parent/student-support-history' },
-    { label: 'Minh chứng', to: '/parent/donation-evidence' },
-    { label: 'Phản hồi', to: '/parent/feedback' },
+    { label: 'Minh chứng trao quà', to: '/parent/donation-evidence' },
+    { label: 'Phản hồi sai lệch', to: '/parent/feedback' },
     { label: 'Trợ lý AI', to: '/parent/chat-assistant' },
   ],
   [ROLES.FUNDRAISER]: [
-    { label: 'Bài kêu gọi', to: '/fundraiser/campaign-update' },
+    { label: 'Quản lý chiến dịch', to: '/fundraiser/campaign-update' },
     { label: 'Tạo chiến dịch', to: '/fundraiser/campaign-create' },
     { label: 'Duyệt đề xuất', to: '/fundraiser/proposal-approval' },
     { label: 'Duyệt tài trợ', to: '/fundraiser/sponsor-approval' },
-    { label: 'Tiếp nhận', to: '/fundraiser/donation-confirm' },
-    { label: 'Phân bổ học sinh', to: '/fundraiser/scholarship-distribution' },
-    { label: 'Giải ngân', to: '/fundraiser/disbursement-progress' },
+    { label: 'Xác nhận tiếp nhận', to: '/fundraiser/donation-confirm' },
+    { label: 'Phân bổ học bổng', to: '/fundraiser/scholarship-distribution' },
+    { label: 'Tiến độ giải ngân', to: '/fundraiser/disbursement-progress' },
   ],
   fundraiser: [
-    { label: 'Bài kêu gọi', to: '/fundraiser/campaign-update' },
+    { label: 'Quản lý chiến dịch', to: '/fundraiser/campaign-update' },
     { label: 'Tạo chiến dịch', to: '/fundraiser/campaign-create' },
     { label: 'Duyệt đề xuất', to: '/fundraiser/proposal-approval' },
     { label: 'Duyệt tài trợ', to: '/fundraiser/sponsor-approval' },
-    { label: 'Tiếp nhận', to: '/fundraiser/donation-confirm' },
-    { label: 'Phân bổ học sinh', to: '/fundraiser/scholarship-distribution' },
-    { label: 'Giải ngân', to: '/fundraiser/disbursement-progress' },
+    { label: 'Xác nhận tiếp nhận', to: '/fundraiser/donation-confirm' },
+    { label: 'Phân bổ học bổng', to: '/fundraiser/scholarship-distribution' },
+    { label: 'Tiến độ giải ngân', to: '/fundraiser/disbursement-progress' },
   ],
   [ROLES.PRINCIPAL]: [
-    { label: 'Duyệt bài tài trợ', to: '/principal/campaign-approval' },
+    { label: 'Duyệt chiến dịch', to: '/principal/campaign-approval' },
     { label: 'Duyệt phân bổ', to: '/principal/distribution-approval' },
     { label: 'Báo cáo tài chính', to: '/principal/financial-report' },
-    { label: 'Phản hồi PH', to: '/principal/parent-feedback-view' },
+    { label: 'Phản hồi phụ huynh', to: '/principal/parent-feedback-view' },
   ],
   principal: [
-    { label: 'Duyệt bài tài trợ', to: '/principal/campaign-approval' },
+    { label: 'Duyệt chiến dịch', to: '/principal/campaign-approval' },
     { label: 'Duyệt phân bổ', to: '/principal/distribution-approval' },
     { label: 'Báo cáo tài chính', to: '/principal/financial-report' },
-    { label: 'Phản hồi PH', to: '/principal/parent-feedback-view' },
+    { label: 'Phản hồi phụ huynh', to: '/principal/parent-feedback-view' },
   ],
   [ROLES.ADMIN]: [
-    { label: 'Người dùng', to: '/admin/user-management' },
+    { label: 'Quản lý người dùng', to: '/admin/user-management' },
     { label: 'Hồ sơ học sinh', to: '/admin/students' },
-    { label: 'Phân quyền', to: '/admin/role-permission' },
-    { label: 'Thống kê', to: '/admin/campaign-statistics' },
+    { label: 'Phân quyền hệ thống', to: '/admin/role-permission' },
+    { label: 'Thống kê chiến dịch', to: '/admin/campaign-statistics' },
   ],
   admin: [
-    { label: 'Người dùng', to: '/admin/user-management' },
+    { label: 'Quản lý người dùng', to: '/admin/user-management' },
     { label: 'Hồ sơ học sinh', to: '/admin/students' },
-    { label: 'Phân quyền', to: '/admin/role-permission' },
-    { label: 'Thống kê', to: '/admin/campaign-statistics' },
+    { label: 'Phân quyền hệ thống', to: '/admin/role-permission' },
+    { label: 'Thống kê chiến dịch', to: '/admin/campaign-statistics' },
   ],
   // Fallback slug
   guest: [
     { label: 'Trang chủ', to: '/campaigns' },
-    { label: 'Bài gây quỹ', to: '/campaigns' },
+    { label: 'Chiến dịch', to: '/campaigns' },
     { label: 'Sao kê', to: '/statement' },
     { label: 'Học sinh', to: '/students' },
   ],
   donor: [
-    { label: 'Chiến dịch gây quỹ', to: '/campaigns' },
+    { label: 'Chiến dịch', to: '/campaigns' },
     { label: 'Tiến trình ủng hộ', to: '/donor/campaign-progress' },
     { label: 'Lịch sử đóng góp', to: '/donor/donation-history' },
     { label: 'Sao kê toàn trường', to: '/statement' },
@@ -143,7 +145,7 @@ const Header = () => {
           </div>
           <div className="header-logo-text">
             <span className="header-logo-name">{APP_NAME}</span>
-            <span className="header-logo-sub">{SCHOOL_NAME.substring(0, 32)}...</span>
+            <span className="header-logo-sub">{SCHOOL_NAME}</span>
           </div>
         </NavLink>
 
@@ -215,7 +217,7 @@ const Header = () => {
                         className="header-dropdown-item"
                         onClick={() => setDropdownOpen(false)}
                       >
-                        <FiBarChart2 /> Tiến trình dự án đã ủng hộ
+                        <FiBarChart2 /> Tiến trình ủng hộ
                       </NavLink>
                     </>
                   ) : (role === 'parent' || roleCode === 'PH' || roleCode === 'PHUHUYNH') ? (
@@ -225,14 +227,14 @@ const Header = () => {
                         className="header-dropdown-item"
                         onClick={() => setDropdownOpen(false)}
                       >
-                        <FiUser /> Lịch sử nhận hỗ trợ
+                        <FiUser /> Lịch sử hỗ trợ
                       </NavLink>
                       <NavLink
                         to="/parent/donation-evidence"
                         className="header-dropdown-item"
                         onClick={() => setDropdownOpen(false)}
                       >
-                        <FiFileText /> Minh chứng trao tặng
+                        <FiFileText /> Minh chứng trao quà
                       </NavLink>
                       <NavLink
                         to="/parent/feedback"
@@ -249,21 +251,21 @@ const Header = () => {
                         className="header-dropdown-item"
                         onClick={() => setDropdownOpen(false)}
                       >
-                        <FiBarChart2 /> Quản lý bài kêu gọi
+                        <FiBarChart2 /> Quản lý chiến dịch
                       </NavLink>
                       <NavLink
                         to="/fundraiser/campaign-create"
                         className="header-dropdown-item"
                         onClick={() => setDropdownOpen(false)}
                       >
-                        <FiHeart /> Tạo bài kêu gọi mới
+                        <FiHeart /> Tạo chiến dịch
                       </NavLink>
                       <NavLink
                         to="/fundraiser/proposal-approval"
                         className="header-dropdown-item"
                         onClick={() => setDropdownOpen(false)}
                       >
-                        <FiFileText /> Duyệt đề xuất NHT
+                        <FiFileText /> Duyệt đề xuất
                       </NavLink>
                     </>
                   ) : (role === 'principal' || roleCode === 'HT' || roleCode === 'HIEUTRUONG') ? (
@@ -273,14 +275,14 @@ const Header = () => {
                         className="header-dropdown-item"
                         onClick={() => setDropdownOpen(false)}
                       >
-                        <FiCheckSquare /> Duyệt bài tài trợ
+                        <FiCheckSquare /> Duyệt chiến dịch
                       </NavLink>
                       <NavLink
                         to="/principal/distribution-approval"
                         className="header-dropdown-item"
                         onClick={() => setDropdownOpen(false)}
                       >
-                        <FiCheckSquare /> Duyệt đợt phân bổ
+                        <FiCheckSquare /> Duyệt phân bổ
                       </NavLink>
                       <NavLink
                         to="/principal/financial-report"

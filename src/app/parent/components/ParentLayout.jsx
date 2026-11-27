@@ -2,7 +2,6 @@
 import { Outlet } from 'react-router-dom';
 import Header from '../../../components/Header/Header';
 import Sidebar from '../../../components/Sidebar/Sidebar';
-import Footer from '../../../components/Footer/Footer';
 import './ParentLayout.css';
 
 const ParentLayout = () => {
@@ -15,7 +14,6 @@ const ParentLayout = () => {
           <Outlet />
         </main>
       </div>
-      <Footer />
     </div>
   );
 };

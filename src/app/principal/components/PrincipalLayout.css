@@ -1,25 +1,38 @@
 .principal-layout {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   background: var(--bg);
+  overflow: hidden;
 }
 .principal-layout__body {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 .principal-layout__main {
   flex: 1;
+  height: 100%;
   overflow-y: auto;
-  padding: 1.5rem;
+  overflow-x: hidden;
+  padding: 1.5rem 2rem;
   min-width: 0;
+  box-sizing: border-box;
 }
 @media (max-width: 768px) {
+  .principal-layout {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
   .principal-layout__body {
     flex-direction: column;
+    overflow: visible;
   }
   .principal-layout__main {
+    height: auto;
     padding: 1rem;
+    overflow: visible;
   }
 }

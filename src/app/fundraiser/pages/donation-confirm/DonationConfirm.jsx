@@ -147,6 +147,7 @@ const DonationConfirm = () => {
       setConfirmModalOpen(false);
       setQuickId('');
       fetchList();
+      window.dispatchEvent(new CustomEvent('sidebar:refresh-badges'));
     } catch (err) {
       const msg = err?.response?.data?.message || err.message || 'Lỗi khi xác nhận tiếp nhận';
       addToast(msg, 'error');

@@ -118,6 +118,7 @@ const SponsorApproval = () => {
       );
       setDetailModalOpen(false);
       fetchList();
+      window.dispatchEvent(new CustomEvent('sidebar:refresh-badges'));
     } catch (err) {
       addToast(err?.response?.data?.message || err.message || 'Lỗi khi duyệt tài trợ', 'error');
     } finally {
@@ -148,6 +149,8 @@ const SponsorApproval = () => {
       setRejectModalOpen(false);
       setDetailModalOpen(false);
       fetchList();
+      window.dispatchEvent(new CustomEvent('sidebar:refresh-badges'));
+      window.dispatchEvent(new CustomEvent('sidebar:refresh-badges'));
     } catch (err) {
       addToast(err?.response?.data?.message || err.message || 'Lỗi khi từ chối đơn', 'error');
     } finally {
