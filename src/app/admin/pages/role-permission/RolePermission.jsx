@@ -1,117 +1,103 @@
-import { useState, Fragment } from 'react';
-import { FiSave, FiRefreshCw } from 'react-icons/fi';
-import Button from '../../../../components/Button/Button';
+import { useState, useEffect, Fragment } from 'react';
+import { FiShield } from 'react-icons/fi';
+import Table from '../../../../components/Table/Table';
 import { useNotification } from '../../../../components/Notification/Notification';
+import { getRoles } from '../../../../services/userService';
 import './RolePermission.css';
 
-const ROLES_LIST = [
-  { code: 'NHT', label: 'Nhà hảo tâm' },
-  { code: 'PH', label: 'Phụ huynh' },
-  { code: 'CBQL', label: 'Cán bộ QL' },
-  { code: 'HT', label: 'Hiệu trưởng' },
-  { code: 'ADMIN', label: 'Admin' },
+const ROLE_COLUMNS = [
+  { code: 'NHATAITRO', label: 'Nhà hảo tâm' },
+  { code: 'PHUHUYNH', label: 'Phụ huynh' },
+  { code: 'CANBO', label: 'Cán bộ gây quỹ' },
+  { code: 'HIEUTRUONG', label: 'Hiệu trưởng' },
+  { code: 'ADMIN', label: 'Quản trị viên' },
 ];
 
 const FEATURES = [
   { group: 'Chiến dịch gây quỹ', items: [
-    { key: 'campaign.view', label: 'Xem danh sách chiến dịch' },
-    { key: 'campaign.create', label: 'Tạo chiến dịch mới' },
-    { key: 'campaign.edit', label: 'Chỉnh sửa chiến dịch' },
-    { key: 'campaign.approve', label: 'Phê duyệt chiến dịch' },
-    { key: 'campaign.delete', label: 'Xóa chiến dịch' },
+    { key: 'campaign.view', label: 'Xem danh sách chiến dịch', roles: ['NHATAITRO', 'PHUHUYNH', 'CANBO', 'HIEUTRUONG', 'ADMIN'] },
+    { key: 'campaign.create', label: 'Tạo & cập nhật chiến dịch', roles: ['CANBO'] },
+    { key: 'campaign.approve', label: 'Phê duyệt / từ chối chiến dịch', roles: ['HIEUTRUONG', 'ADMIN'] },
   ]},
-  { group: 'Tài trợ & Quyên góp', items: [
-    { key: 'donation.view', label: 'Xem danh sách tài trợ' },
-    { key: 'donation.register', label: 'Đăng ký tài trợ' },
-    { key: 'donation.confirm', label: 'Xác nhận tiếp nhận tài trợ' },
+  { group: 'Tài trợ & Đề xuất', items: [
+    { key: 'donation.register', label: 'Đăng ký tài trợ & đề xuất', roles: ['NHATAITRO'] },
+    { key: 'donation.approve', label: 'Duyệt đề xuất, tài trợ & xác nhận thực nhận', roles: ['CANBO'] },
   ]},
-  { group: 'Phân bổ học sinh', items: [
-    { key: 'dist.view', label: 'Xem đợt phân bổ' },
-    { key: 'dist.create', label: 'Tạo đợt phân bổ' },
-    { key: 'dist.approve', label: 'Phê duyệt đợt phân bổ' },
+  { group: 'Phân bổ & Minh chứng', items: [
+    { key: 'dist.create', label: 'Lập kế hoạch phân bổ & upload minh chứng', roles: ['CANBO'] },
+    { key: 'dist.approve', label: 'Phê duyệt kế hoạch phân bổ', roles: ['HIEUTRUONG', 'ADMIN'] },
+    { key: 'dist.parent', label: 'Xem lịch sử nhận hỗ trợ của con em', roles: ['PHUHUYNH'] },
   ]},
-  { group: 'Người dùng', items: [
-    { key: 'user.view', label: 'Xem danh sách người dùng' },
-    { key: 'user.create', label: 'Tạo người dùng' },
-    { key: 'user.edit', label: 'Chỉnh sửa người dùng' },
-    { key: 'user.delete', label: 'Xóa người dùng' },
+  { group: 'Phản hồi & Báo cáo', items: [
+    { key: 'feedback.reply', label: 'Trả lời phản hồi phụ huynh & nhà hảo tâm', roles: ['CANBO'] },
+    { key: 'feedback.monitor', label: 'Giám sát phản hồi & xem báo cáo tài chính', roles: ['HIEUTRUONG', 'ADMIN'] },
   ]},
-  { group: 'Báo cáo & Thống kê', items: [
-    { key: 'report.view', label: 'Xem báo cáo tài chính' },
-    { key: 'report.export', label: 'Xuất báo cáo' },
+  { group: 'Quản trị hệ thống', items: [
+    { key: 'admin.users', label: 'Quản lý vai trò, người dùng & thống kê chiến dịch', roles: ['ADMIN'] },
   ]},
 ];
 
-const DEFAULT_PERMISSIONS = {
-  'campaign.view': { NHT: true, PH: true, CBQL: true, HT: true, ADMIN: true },
-  'campaign.create': { NHT: false, PH: false, CBQL: true, HT: false, ADMIN: true },
-  'campaign.edit': { NHT: false, PH: false, CBQL: true, HT: false, ADMIN: true },
-  'campaign.approve': { NHT: false, PH: false, CBQL: false, HT: true, ADMIN: true },
-  'campaign.delete': { NHT: false, PH: false, CBQL: false, HT: false, ADMIN: true },
-  'donation.view': { NHT: true, PH: false, CBQL: true, HT: true, ADMIN: true },
-  'donation.register': { NHT: true, PH: false, CBQL: false, HT: false, ADMIN: false },
-  'donation.confirm': { NHT: false, PH: false, CBQL: true, HT: false, ADMIN: true },
-  'dist.view': { NHT: false, PH: true, CBQL: true, HT: true, ADMIN: true },
-  'dist.create': { NHT: false, PH: false, CBQL: true, HT: false, ADMIN: true },
-  'dist.approve': { NHT: false, PH: false, CBQL: false, HT: true, ADMIN: true },
-  'user.view': { NHT: false, PH: false, CBQL: false, HT: false, ADMIN: true },
-  'user.create': { NHT: false, PH: false, CBQL: false, HT: false, ADMIN: true },
-  'user.edit': { NHT: false, PH: false, CBQL: false, HT: false, ADMIN: true },
-  'user.delete': { NHT: false, PH: false, CBQL: false, HT: false, ADMIN: true },
-  'report.view': { NHT: false, PH: false, CBQL: true, HT: true, ADMIN: true },
-  'report.export': { NHT: false, PH: false, CBQL: false, HT: true, ADMIN: true },
-};
-
 const RolePermission = () => {
   const { addToast } = useNotification();
-  const [permissions, setPermissions] = useState({ ...DEFAULT_PERMISSIONS });
-  const [saving, setSaving] = useState(false);
+  const [roles, setRoles] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const toggle = (featureKey, roleCode) => {
-    setPermissions((prev) => ({
-      ...prev,
-      [featureKey]: {
-        ...prev[featureKey],
-        [roleCode]: !prev[featureKey]?.[roleCode],
-      },
-    }));
-  };
+  useEffect(() => {
+    const fetchRoles = async () => {
+      setLoading(true);
+      try {
+        const list = await getRoles();
+        setRoles(Array.isArray(list) ? list : []);
+      } catch (err) {
+        addToast(err?.response?.data?.message || err?.message || 'Không thể tải danh sách vai trò', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRoles();
+  }, [addToast]);
 
-  const handleSave = async () => {
-    setSaving(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setSaving(false);
-    addToast('Đã lưu cấu hình phân quyền thành công', 'success');
-  };
-
-  const handleReset = () => {
-    setPermissions({ ...DEFAULT_PERMISSIONS });
-    addToast('Đã khôi phục về cài đặt mặc định', 'info');
-  };
+  const roleTableColumns = [
+    { key: 'maVaiTro', title: 'Mã vai trò', width: 110, render: (v) => `#${v}` },
+    {
+      key: 'tenVaiTro',
+      title: 'Tên vai trò',
+      width: 180,
+      render: (v) => <strong>{v}</strong>,
+    },
+    { key: 'moTa', title: 'Mô tả quyền hạn', render: (v) => v || '—' },
+  ];
 
   return (
     <div className="role-permission">
       <div className="rp-header">
         <div>
-          <h1>Phân quyền hệ thống</h1>
-          <p>Cấu hình quyền truy cập chức năng cho từng vai trò người dùng</p>
+          <h1>Quản lý vai trò & phân quyền hệ thống</h1>
+          <p>Danh mục vai trò thực tế từ hệ thống (GET /admin/roles) và ma trận phân quyền theo chuẩn bảo mật Backend</p>
         </div>
-        <div className="rp-actions">
-          <Button variant="outline" onClick={handleReset}>
-            <FiRefreshCw /> Khôi phục mặc định
-          </Button>
-          <Button variant="primary" loading={saving} onClick={handleSave}>
-            <FiSave /> Lưu cấu hình
-          </Button>
+        <div className="rp-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--primary)', fontWeight: 600 }}>
+          <FiShield /> Chỉ xem (Phân quyền cố định tại Backend)
         </div>
+      </div>
+
+      <div className="rp-table-wrap" style={{ marginBottom: '1.5rem', padding: '1rem' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '0.75rem' }}>Danh mục vai trò ({roles.length})</h3>
+        <Table
+          columns={roleTableColumns}
+          data={roles}
+          loading={loading}
+          rowKey="maVaiTro"
+          emptyTitle="Không có vai trò"
+          emptyDescription="Chưa tải được danh mục vai trò từ hệ thống."
+        />
       </div>
 
       <div className="rp-table-wrap">
         <table className="rp-table">
           <thead>
             <tr>
-              <th className="rp-th-feature">Chức năng</th>
-              {ROLES_LIST.map((r) => (
+              <th className="rp-th-feature">Chức năng hệ thống</th>
+              {ROLE_COLUMNS.map((r) => (
                 <th key={r.code} className="rp-th-role">{r.label}</th>
               ))}
             </tr>
@@ -120,20 +106,21 @@ const RolePermission = () => {
             {FEATURES.map((group) => (
               <Fragment key={group.group}>
                 <tr className="rp-group-row">
-                  <td colSpan={ROLES_LIST.length + 1} className="rp-group-label">
+                  <td colSpan={ROLE_COLUMNS.length + 1} className="rp-group-label">
                     {group.group}
                   </td>
                 </tr>
                 {group.items.map((feat) => (
                   <tr key={feat.key} className="rp-row">
                     <td className="rp-feature-label">{feat.label}</td>
-                    {ROLES_LIST.map((role) => (
+                    {ROLE_COLUMNS.map((role) => (
                       <td key={role.code} className="rp-cell">
                         <label className="rp-checkbox">
                           <input
                             type="checkbox"
-                            checked={!!permissions[feat.key]?.[role.code]}
-                            onChange={() => toggle(feat.key, role.code)}
+                            checked={feat.roles.includes(role.code)}
+                            disabled
+                            readOnly
                           />
                         </label>
                       </td>

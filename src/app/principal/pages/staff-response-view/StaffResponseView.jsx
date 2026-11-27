@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { FiEye } from 'react-icons/fi';
 import Table from '../../../../components/Table/Table';
 import Modal from '../../../../components/Modal/Modal';
-import { getPrincipalFeedbacks } from '../../../../services/feedbackService';
+import { getPrincipalFeedbacks, getPrincipalFeedbackDetail } from '../../../../services/feedbackService';
 import './StaffResponseView.css';
 
 const StaffResponseView = () => {
@@ -29,6 +29,16 @@ const StaffResponseView = () => {
     fetchData();
   }, []);
 
+  const handleViewDetail = async (row) => {
+    setSelected(row);
+    try {
+      const detail = await getPrincipalFeedbackDetail(row.maPhanHoi || row.id);
+      if (detail) setSelected(detail);
+    } catch {
+      // Giữ dữ liệu hàng hiện tại nếu detail lỗi
+    }
+  };
+
   const dataWithStt = responses.map((r, i) => ({ ...r, _stt: i + 1 }));
 
   const columns = [
@@ -41,7 +51,7 @@ const StaffResponseView = () => {
     {
       key: 'action', title: '',
       render: (_, row) => (
-        <button className="srv-btn" onClick={() => setSelected(row)}>
+        <button className="srv-btn" onClick={() => handleViewDetail(row)}>
           <FiEye /> Xem
         </button>
       ),

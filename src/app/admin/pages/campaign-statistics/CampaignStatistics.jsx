@@ -3,16 +3,13 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell, ResponsiveContainer,
 } from 'recharts';
-import { FiHeart, FiActivity, FiCheckCircle, FiXCircle } from 'react-icons/fi';
+import { FiHeart, FiActivity, FiCheckCircle, FiXCircle, FiClock, FiFileText } from 'react-icons/fi';
 import Table from '../../../../components/Table/Table';
-import { getAllCampaigns } from '../../../../services/campaignService';
-import { getAllDonations } from '../../../../services/donationService';
+import { useNotification } from '../../../../components/Notification/Notification';
+import { getAdminCampaignStatistics } from '../../../../services/reportService';
 import './CampaignStatistics.css';
 
-const MONTHS = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
-const PIE_COLORS = ['#4361ee','#4cc9f0','#f72585','#7209b7','#302b63'];
-
-const formatFull = (n) => (n != null ? n.toLocaleString('vi-VN') + ' ₫' : '0 ₫');
+const PIE_COLORS = ['#2e7d5b', '#4361ee', '#f59e0b', '#dc2626', '#6b7280'];
 
 const KpiCard = ({ icon, label, value, color }) => (
   <div className="cs-kpi" style={{ '--kpi-c': color }}>
@@ -25,120 +22,92 @@ const KpiCard = ({ icon, label, value, color }) => (
 );
 
 const CampaignStatistics = () => {
-  const [campaigns, setCampaigns] = useState([]);
-  const [donations, setDonations] = useState([]);
+  const { addToast } = useNotification();
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchAll = async () => {
+    const fetchStats = async () => {
       setLoading(true);
       try {
-        const [campRes, donRes] = await Promise.all([
-          getAllCampaigns(),
-          getAllDonations(),
-        ]);
-        setCampaigns(campRes.data || campRes);
-        setDonations(donRes.data || donRes);
+        const data = await getAdminCampaignStatistics();
+        setStats(data || null);
+      } catch (err) {
+        addToast(err?.response?.data?.message || err?.message || 'Không thể tải thống kê chiến dịch', 'error');
       } finally {
         setLoading(false);
       }
     };
-    fetchAll();
-  }, []);
+    fetchStats();
+  }, [addToast]);
 
-  const total = campaigns.length;
-  const active = campaigns.filter((c) => c.trangthai === 'DangChay').length;
-  const done = campaigns.filter((c) => c.trangthai === 'KetThuc').length;
-  const rejected = campaigns.filter((c) => c.trangthai === 'TuChoi').length;
-  const pending = campaigns.filter((c) => c.trangthai === 'ChoDuyet').length;
+  const total = stats?.tongSoBaiDang ?? 0;
+  const active = stats?.soBaiDangChay ?? 0;
+  const pending = stats?.soBaiChoDuyet ?? 0;
+  const done = stats?.soBaiKetThuc ?? 0;
+  const draft = stats?.soBaiNhap ?? 0;
+  const rejected = stats?.soBaiTuChoi ?? 0;
+  const monthlyList = (Array.isArray(stats?.thongKeTheoThang) ? [...stats.thongKeTheoThang] : [])
+    .sort((a, b) => (Number(a.nam || 0) - Number(b.nam || 0)) || (Number(a.thang || 0) - Number(b.thang || 0)));
 
-  const barData = MONTHS.map((month, i) => {
-    const count = campaigns.filter((c) => {
-      const m = new Date(c.ngaybatdau || '').getMonth();
-      return m === i;
-    }).length;
-    return { name: month, 'Chiến dịch': count };
-  });
+  const barData = monthlyList.map((m) => ({
+    name: `T${m.thang}/${m.nam}`,
+    'Chiến dịch': Number(m.soBaiDang || 0),
+  }));
 
   const pieData = [
-    { name: 'Đang chạy', value: active },
-    { name: 'Đã hoàn thành', value: done },
-    { name: 'Chờ duyệt', value: pending },
-    { name: 'Từ chối', value: rejected },
+    { name: 'Đang chạy (DADUYET)', value: active },
+    { name: 'Kết thúc (KETTHUC)', value: done },
+    { name: 'Chờ duyệt (CHODUYET)', value: pending },
+    { name: 'Từ chối (TUCHOI)', value: rejected },
+    { name: 'Lưu nháp (NHAP)', value: draft },
   ].filter((item) => item.value > 0);
-
-  const topCamps = campaigns
-    .map((c) => {
-      const raised = c.tongtienDaNhan !== undefined && c.tongtienDaNhan !== null
-        ? c.tongtienDaNhan
-        : donations
-            .filter((d) => d.maBaiTaiTro === c.maBaiTaiTro && (d.trangthai === 'DaNhan' || d.trangthai === 'HoanThanh'))
-            .reduce((s, d) => s + (d.soTienTT ?? d.soTienDK ?? d.amount ?? 0), 0);
-      return { ...c, raised, _id: c.maBaiTaiTro };
-    })
-    .sort((a, b) => b.raised - a.raised)
-    .slice(0, 10)
-    .map((c, i) => ({ ...c, _stt: i + 1 }));
-
-  const statusBadge = (s) => {
-    const map = {
-      DangChay: { label: 'Đang chạy', cls: 'cs-badge--active' },
-      KetThuc: { label: 'Kết thúc', cls: 'cs-badge--done' },
-      ChoDuyet: { label: 'Chờ duyệt', cls: 'cs-badge--pending' },
-      DaDuyet: { label: 'Đã duyệt', cls: 'cs-badge--approved' },
-      TuChoi: { label: 'Từ chối', cls: 'cs-badge--rejected' },
-    };
-    const info = map[s] || { label: s, cls: '' };
-    return <span className={`cs-badge ${info.cls}`}>{info.label}</span>;
-  };
 
   const columns = [
     { key: '_stt', title: 'STT', width: 56 },
-    { key: 'tieude', title: 'Tiêu đề chiến dịch', render: (_, row) => <span className="cs-title">{row.tieude}</span> },
-    { key: 'trangthai', title: 'Trạng thái', render: (_, row) => statusBadge(row.trangthai) },
-    { key: 'ngaybatdau', title: 'Ngày bắt đầu', render: (_, row) => row.ngaybatdau },
-    { key: 'raised', title: 'Đã tiếp nhận', align: 'right', render: (_, row) => <strong>{formatFull(row.raised)}</strong> },
+    { key: 'nam', title: 'Năm', width: 100 },
+    { key: 'thang', title: 'Tháng', width: 100, render: (v) => `Tháng ${v}` },
+    { key: 'soBaiDang', title: 'Số lượng chiến dịch', align: 'right', render: (v) => <strong>{v}</strong> },
   ];
-
-  if (loading) return <div className="cs-loading">Đang tải thống kê...</div>;
 
   return (
     <div className="campaign-statistics">
       <div className="cs-header">
-        <h1>Thống kê chiến dịch</h1>
-        <p>Tổng quan tất cả bài kêu gọi tài trợ trên hệ thống</p>
+        <div>
+          <h1>Thống kê tổng quan chiến dịch</h1>
+          <p>Số liệu thực tế về bài đăng gây quỹ và phân bổ theo tháng (GET /admin/statistics/campaigns)</p>
+        </div>
       </div>
 
       <div className="cs-kpis">
-        <KpiCard icon={<FiHeart />} label="Tổng chiến dịch" value={total} color="#302b63" />
-        <KpiCard icon={<FiActivity />} label="Đang chạy" value={active} color="#4361ee" />
-        <KpiCard icon={<FiCheckCircle />} label="Hoàn thành" value={done} color="#4cc9f0" />
-        <KpiCard icon={<FiXCircle />} label="Từ chối" value={rejected} color="#f72585" />
+        <KpiCard icon={<FiHeart />} label="Tổng chiến dịch" value={loading ? '...' : total} color="#4361ee" />
+        <KpiCard icon={<FiActivity />} label="Đang chạy (DADUYET)" value={loading ? '...' : active} color="#2e7d5b" />
+        <KpiCard icon={<FiClock />} label="Chờ duyệt (CHODUYET)" value={loading ? '...' : pending} color="#f59e0b" />
+        <KpiCard icon={<FiCheckCircle />} label="Đã kết thúc (KETTHUC)" value={loading ? '...' : done} color="#4cc9f0" />
+        <KpiCard icon={<FiFileText />} label="Lưu nháp (NHAP)" value={loading ? '...' : draft} color="#6b7280" />
+        <KpiCard icon={<FiXCircle />} label="Từ chối (TUCHOI)" value={loading ? '...' : rejected} color="#f72585" />
       </div>
 
       <div className="cs-charts">
-        <div className="cs-chart-card">
-          <h3>Chiến dịch theo tháng</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={barData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0eb" />
+        <div className="cs-chart-card cs-chart-card--wide">
+          <h3>Số chiến dịch khởi tạo theo tháng</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={barData} margin={{ top: 10, right: 16, left: -16, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
               <Tooltip />
-              <Bar dataKey="Chiến dịch" fill="#302b63" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Chiến dịch" fill="#4361ee" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
+
         <div className="cs-chart-card">
-          <h3>Phân bố theo trạng thái chiến dịch</h3>
-          <ResponsiveContainer width="100%" height={250}>
+          <h3>Phân bố trạng thái</h3>
+          <ResponsiveContainer width="100%" height={240}>
             <PieChart>
-              <Pie
-                data={pieData} cx="50%" cy="50%" outerRadius={85}
-                dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent*100).toFixed(0)}%`}
-                labelLine={false}
-              >
+              <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={78}
+                label={({ name, percent }) => `${name.split(' ')[0]} ${(percent * 100).toFixed(0)}%`}>
                 {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
               </Pie>
               <Tooltip />
@@ -148,12 +117,14 @@ const CampaignStatistics = () => {
       </div>
 
       <div className="cs-table-card">
-        <h3>Top 10 chiến dịch gây quỹ nhiều nhất</h3>
+        <h3>Thống kê chiến dịch theo tháng</h3>
         <Table
           columns={columns}
-          data={topCamps}
+          data={monthlyList.map((m, i) => ({ ...m, _stt: i + 1, _id: `${m.nam}-${m.thang}` }))}
+          loading={loading}
           rowKey="_id"
-          emptyTitle="Không có dữ liệu"
+          emptyTitle="Chưa có dữ liệu thống kê"
+          emptyDescription="Chưa có chiến dịch nào được ghi nhận theo tháng."
         />
       </div>
     </div>

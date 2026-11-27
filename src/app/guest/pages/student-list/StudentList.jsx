@@ -294,7 +294,7 @@ const StudentList = () => {
                 <option value="ALL">Tất cả các lớp ({classList.length})</option>
                 {classList.map((cls) => (
                   <option key={cls} value={cls}>
-                    Lớp {cls}
+                    Lớp {String(cls).replace(/^Lớp\s+/i, '')}
                   </option>
                 ))}
               </select>
@@ -408,7 +408,7 @@ const StudentList = () => {
                 <div className="student-card-body">
                   <div className="student-info-row">
                     <span className="info-label">Lớp học:</span>
-                    <span className="class-tag">Lớp {stu.lop || 'Chuyên biệt'}</span>
+                    <span className="class-tag">Lớp {String(stu.lop || 'Chuyên biệt').replace(/^Lớp\s+/i, '')}</span>
                   </div>
 
                   <div className="student-info-row">
@@ -484,7 +484,7 @@ const StudentList = () => {
                         </span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <span className="class-tag">Lớp {stu.lop || 'CB'}</span>
+                        <span className="class-tag">Lớp {String(stu.lop || 'CB').replace(/^Lớp\s+/i, '')}</span>
                       </td>
                       <td>
                         {renderSupportTag(stu.loaihotro || stu.loaiHoTro, stu.mota)}

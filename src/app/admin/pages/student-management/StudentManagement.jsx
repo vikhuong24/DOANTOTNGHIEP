@@ -155,11 +155,14 @@ const StudentManagement = () => {
       title: 'Giới tính',
       width: 90,
       align: 'center',
-      render: (v) => (
-        <span className={`gioitinh-tag ${v === 'Nu' ? 'gioitinh-tag--nu' : 'gioitinh-tag--nam'}`}>
-          {v === 'Nu' ? 'Nữ' : 'Nam'}
-        </span>
-      ),
+      render: (v) => {
+        const isFemale = /^(nữ|nu)$/i.test(String(v || '').trim());
+        return (
+          <span className={`gioitinh-tag ${isFemale ? 'gioitinh-tag--nu' : 'gioitinh-tag--nam'}`}>
+            {isFemale ? 'Nữ' : 'Nam'}
+          </span>
+        );
+      },
     },
     { key: 'ngaysinh', title: 'Ngày sinh', width: 110, render: (v) => v || '—' },
     { key: 'parent', title: 'Phụ huynh đại diện', render: (_, row) => getParentName(row.mahuuhuynh, row) },
@@ -172,11 +175,19 @@ const StudentManagement = () => {
       key: 'trangthai',
       title: 'Trạng thái',
       width: 120,
-      render: (v) => (
-        <span className={`stu-status-badge stu-status-badge--${v ? v.toLowerCase() : 'danghoc'}`}>
-          {v === 'DangHoc' ? 'Đang học' : v === 'DaTotNghiep' ? 'Đã tốt nghiệp' : 'Nghỉ học'}
-        </span>
-      ),
+      render: (v) => {
+        const st = String(v || 'DANGHOC').toUpperCase();
+        const label =
+          st === 'DANGHOC' ? 'Đang học'
+          : st === 'DATOTNGHIEP' ? 'Đã tốt nghiệp'
+          : st === 'TAMNGHI' ? 'Tạm nghỉ'
+          : 'Nghỉ học';
+        return (
+          <span className={`stu-status-badge stu-status-badge--${st.toLowerCase()}`}>
+            {label}
+          </span>
+        );
+      },
     },
     {
       key: 'action',
@@ -335,12 +346,12 @@ const StudentManagement = () => {
           <div className="stu-form-group">
             <label>Trạng thái học tập</label>
             <select
-              value={form.trangthai}
+              value={String(form.trangthai || 'DANGHOC').toUpperCase()}
               onChange={(e) => setForm({ ...form, trangthai: e.target.value })}
             >
-              <option value="DangHoc">Đang học</option>
-              <option value="DaTotNghiep">Đã tốt nghiệp</option>
-              <option value="NghiHoc">Nghỉ học</option>
+              <option value="DANGHOC">Đang học</option>
+              <option value="DATOTNGHIEP">Đã tốt nghiệp</option>
+              <option value="NGHIHOC">Nghỉ học</option>
             </select>
           </div>
         </div>

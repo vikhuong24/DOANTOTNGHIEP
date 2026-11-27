@@ -79,16 +79,30 @@ export const getFeedbacks = getFundraiserFeedbacks;
 
 /**
  * Hiệu trưởng lấy toàn bộ danh sách phản hồi và giám sát câu trả lời của cán bộ
+ * GET /principal/feedbacks?trangThai=...
  */
-export const getPrincipalFeedbacks = async () => {
+export const getPrincipalFeedbacks = async (trangThai) => {
   try {
-    const res = await api.get('/principal/feedbacks');
+    const params = {};
+    if (trangThai && trangThai !== 'ALL' && trangThai !== 'all') {
+      params.trangThai = trangThai;
+    }
+    const res = await api.get('/principal/feedbacks', { params });
     const list = unwrapList(res);
     return list.map(normalizeFeedback);
   } catch (err) {
     console.error('Lỗi khi lấy danh sách phản hồi hiệu trưởng:', err);
     throw err;
   }
+};
+
+/**
+ * Hiệu trưởng xem chi tiết một phản hồi
+ * GET /principal/feedbacks/{id}
+ */
+export const getPrincipalFeedbackDetail = async (id) => {
+  const res = await api.get(`/principal/feedbacks/${id}`);
+  return normalizeFeedback(unwrap(res));
 };
 
 /**

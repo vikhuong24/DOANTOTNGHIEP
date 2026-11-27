@@ -1,30 +1,40 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FiEdit2, FiTrash2, FiLock, FiUnlock, FiPlus, FiSearch, FiX } from 'react-icons/fi';
+import { FiEdit2, FiLock, FiUnlock, FiPlus, FiSearch, FiX, FiEye } from 'react-icons/fi';
 import Table from '../../../../components/Table/Table';
 import Modal from '../../../../components/Modal/Modal';
 import Button from '../../../../components/Button/Button';
 import { useNotification } from '../../../../components/Notification/Notification';
+import { useAuth } from '../../../../contexts/AuthContext';
 import {
-  getAllUsers, createUser, updateUser, deleteUser, toggleUserStatus, getRoles
+  getAllUsers, getUserById, createUser, updateUser, toggleUserStatus, getRoles
 } from '../../../../services/userService';
+import { formatDate } from '../../../../utils/formatters';
 import './UserManagement.css';
 
 const TRANGTHAI_OPTIONS = [
   { value: '', label: 'Tất cả trạng thái' },
-  { value: 'HoatDong', label: 'Hoạt động' },
-  { value: 'Khoa', label: 'Đã khóa' },
-  { value: 'ChoDuyet', label: 'Chờ duyệt' },
+  { value: 'HOATDONG', label: 'Hoạt động' },
+  { value: 'KHOA', label: 'Đã khóa' },
 ];
 
-const EMPTY_FORM = { hoten: '', email: '', sdt: '', tendangnhap: '', matkhau: '', maVaiTro: 'NHT', diachi: '' };
+const EMPTY_FORM = {
+  hoten: '',
+  email: '',
+  sdt: '',
+  tendangnhap: '',
+  matkhau: '',
+  maVaiTro: 4,
+  diachi: '',
+  trangthai: 'HOATDONG',
+};
 
 const statusBadge = (s) => {
+  const st = String(s || '').toUpperCase();
   const map = {
-    HoatDong: { label: 'Hoạt động', cls: 'um-badge--active' },
-    Khoa: { label: 'Đã khóa', cls: 'um-badge--locked' },
-    ChoDuyet: { label: 'Chờ duyệt', cls: 'um-badge--pending' },
+    HOATDONG: { label: 'Hoạt động', cls: 'um-badge--active' },
+    KHOA: { label: 'Đã khóa', cls: 'um-badge--locked' },
   };
-  const info = map[s] || { label: s, cls: '' };
+  const info = map[st] || { label: st || '—', cls: '' };
   return <span className={`um-badge ${info.cls}`}>{info.label}</span>;
 };
 
@@ -33,8 +43,7 @@ const getInitials = (name) => {
   return name.split(' ').map((w) => w[0]).slice(-2).join('').toUpperCase();
 };
 
-// Component Form nhập liệu Người dùng (đặt ngoài UserManagement để giữ focus và state)
-const UserFormFields = ({ form, formErrors, roles, modalType, onChange }) => (
+const UserFormFields = ({ form, formErrors, roles, modalType, isSelfEdit, onChange }) => (
   <div className="um-form">
     <div className="um-form__row">
       <div className={`um-form__field ${formErrors.hoten ? 'um-form__field--error' : ''}`}>
@@ -42,10 +51,10 @@ const UserFormFields = ({ form, formErrors, roles, modalType, onChange }) => (
         <input name="hoten" value={form.hoten} onChange={onChange} placeholder="Nguyễn Văn A" />
         {formErrors.hoten && <span>{formErrors.hoten}</span>}
       </div>
-      <div className="um-form__field">
+      <div className={`um-form__field ${formErrors.email ? 'um-form__field--error' : ''}`}>
         <label>Email</label>
         <input name="email" type="email" value={form.email} onChange={onChange} placeholder="email@example.com" />
-        {formErrors.email && <span className="um-form__err">{formErrors.email}</span>}
+        {formErrors.email && <span>{formErrors.email}</span>}
       </div>
     </div>
     <div className="um-form__row">
@@ -61,26 +70,57 @@ const UserFormFields = ({ form, formErrors, roles, modalType, onChange }) => (
     <div className="um-form__row">
       <div className={`um-form__field ${formErrors.tendangnhap ? 'um-form__field--error' : ''}`}>
         <label>Tên đăng nhập <span className="um-form__req">*</span></label>
-        <input name="tendangnhap" value={form.tendangnhap} onChange={onChange} placeholder="username" />
+        <input
+          name="tendangnhap"
+          value={form.tendangnhap}
+          onChange={onChange}
+          placeholder="username"
+          disabled={modalType === 'edit'}
+        />
         {formErrors.tendangnhap && <span>{formErrors.tendangnhap}</span>}
       </div>
       <div className={`um-form__field ${formErrors.matkhau ? 'um-form__field--error' : ''}`}>
         <label>Mật khẩu {modalType === 'add' && <span className="um-form__req">*</span>}</label>
-        <input name="matkhau" type="password" value={form.matkhau} onChange={onChange} placeholder={modalType === 'edit' ? 'Để trống nếu không đổi' : 'Nhập mật khẩu'} />
+        <input
+          name="matkhau"
+          type="password"
+          value={form.matkhau}
+          onChange={onChange}
+          placeholder={modalType === 'edit' ? 'Để trống nếu không đổi (tối thiểu 6 ký tự)' : 'Tối thiểu 6 ký tự'}
+        />
         {formErrors.matkhau && <span>{formErrors.matkhau}</span>}
       </div>
     </div>
-    <div className="um-form__field">
-      <label>Vai trò</label>
-      <select name="maVaiTro" value={form.maVaiTro} onChange={onChange}>
-        {roles.map((r) => <option key={r.maVaiTro} value={r.maVaiTro}>{r.tenVaiTro}</option>)}
-      </select>
+    <div className="um-form__row">
+      <div className="um-form__field">
+        <label>Vai trò</label>
+        <select name="maVaiTro" value={form.maVaiTro} onChange={onChange} disabled={isSelfEdit}>
+          {roles.map((r) => (
+            <option key={r.maVaiTro} value={r.maVaiTro}>
+              {r.tenVaiTro}{r.moTa ? ` — ${r.moTa}` : ''}
+            </option>
+          ))}
+        </select>
+        {isSelfEdit && (
+          <small style={{ color: '#888' }}>Không thể tự thay đổi vai trò của chính tài khoản đang đăng nhập.</small>
+        )}
+      </div>
+      <div className="um-form__field">
+        <label>Trạng thái</label>
+        <select name="trangthai" value={form.trangthai} onChange={onChange} disabled={isSelfEdit}>
+          <option value="HOATDONG">Hoạt động</option>
+          <option value="KHOA">Đã khóa</option>
+        </select>
+      </div>
     </div>
   </div>
 );
 
 const UserManagement = () => {
   const { addToast } = useNotification();
+  const { user: currentUser } = useAuth();
+  const currentUserId = currentUser?.maNguoiDung || currentUser?.id;
+
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -96,33 +136,73 @@ const UserManagement = () => {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getAllUsers({ search, maVaiTro: filterRole, trangthai: filterStatus });
-      setUsers(res.data || res);
+      const res = await getAllUsers({
+        search,
+        roleId: filterRole || undefined,
+        trangthai: filterStatus || undefined,
+      });
+      setUsers(res.data || res || []);
+    } catch (err) {
+      addToast(err?.response?.data?.message || err?.message || 'Không thể tải danh sách người dùng', 'error');
     } finally {
       setLoading(false);
     }
-  }, [search, filterRole, filterStatus]);
+  }, [search, filterRole, filterStatus, addToast]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
   useEffect(() => { getRoles().then(setRoles); }, []);
 
-  const openAdd = () => { setForm(EMPTY_FORM); setFormErrors({}); setModalType('add'); };
+  const openAdd = () => {
+    setSelectedUser(null);
+    setForm({ ...EMPTY_FORM, maVaiTro: roles[0]?.maVaiTro || 4 });
+    setFormErrors({});
+    setModalType('add');
+  };
+
+  const openDetail = async (u) => {
+    setSelectedUser(u);
+    setModalType('detail');
+    try {
+      const detail = await getUserById(u.maNguoiDung);
+      if (detail) setSelectedUser(detail);
+    } catch {
+      // Giữ thông tin hiện tại nếu gọi detail lỗi
+    }
+  };
+
   const openEdit = (u) => {
     setSelectedUser(u);
-    setForm({ hoten: u.hoten, email: u.email || '', sdt: u.sdt || '', tendangnhap: u.tendangnhap, matkhau: '', maVaiTro: u.maVaiTro, diachi: u.diachi || '' });
+    setForm({
+      hoten: u.hoten || '',
+      email: u.email || '',
+      sdt: u.sdt || '',
+      tendangnhap: u.tendangnhap || '',
+      matkhau: '',
+      maVaiTro: u.maVaiTro || 4,
+      diachi: u.diachi || '',
+      trangthai: String(u.trangthai || 'HOATDONG').toUpperCase(),
+    });
     setFormErrors({});
     setModalType('edit');
   };
-  const openDelete = (u) => { setSelectedUser(u); setModalType('delete'); };
+
   const openToggle = (u) => { setSelectedUser(u); setModalType('toggle'); };
   const closeModal = () => { setModalType(null); setSelectedUser(null); };
 
   const validateForm = () => {
     const errs = {};
     if (!form.hoten.trim()) errs.hoten = 'Họ tên không được bỏ trống';
-    if (!form.tendangnhap.trim()) errs.tendangnhap = 'Tên đăng nhập không được bỏ trống';
-    if (modalType === 'add' && !form.matkhau) errs.matkhau = 'Mật khẩu không được bỏ trống';
-    if (form.email && !/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Email không hợp lệ';
+    if (modalType === 'add') {
+      if (!form.tendangnhap.trim() || form.tendangnhap.trim().length < 3) {
+        errs.tendangnhap = 'Tên đăng nhập phải từ 3 đến 50 ký tự';
+      }
+      if (!form.matkhau || form.matkhau.length < 6) {
+        errs.matkhau = 'Mật khẩu phải từ 6 ký tự trở lên';
+      }
+    } else if (form.matkhau && form.matkhau.length < 6) {
+      errs.matkhau = 'Mật khẩu mới phải từ 6 ký tự trở lên';
+    }
+    if (form.email && !/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Email không đúng định dạng';
     return errs;
   };
 
@@ -138,58 +218,56 @@ const UserManagement = () => {
     try {
       if (modalType === 'add') {
         await createUser(form);
-        addToast('Đã thêm người dùng mới', 'success');
+        addToast('Đã tạo tài khoản người dùng mới', 'success');
       } else {
         const updateData = { ...form };
         if (!updateData.matkhau) delete updateData.matkhau;
+        if (Number(selectedUser.maNguoiDung) === Number(currentUserId)) {
+          delete updateData.maVaiTro;
+          delete updateData.trangthai;
+        }
         await updateUser(selectedUser.maNguoiDung, updateData);
         addToast('Đã cập nhật thông tin người dùng', 'success');
       }
       fetchUsers();
       closeModal();
     } catch (err) {
-      addToast(err.message || 'Có lỗi xảy ra', 'error');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setActionLoading(true);
-    try {
-      await deleteUser(selectedUser.maNguoiDung);
-      addToast('Đã xóa người dùng', 'success');
-      fetchUsers();
-      closeModal();
-    } catch (err) {
-      addToast(err.message || 'Có lỗi xảy ra', 'error');
+      addToast(err?.response?.data?.message || err?.message || 'Có lỗi xảy ra', 'error');
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleToggle = async () => {
+    if (!selectedUser) return;
+    if (Number(selectedUser.maNguoiDung) === Number(currentUserId)) {
+      addToast('Không thể tự khóa tài khoản đang đăng nhập', 'warning');
+      return;
+    }
     setActionLoading(true);
     try {
-      await toggleUserStatus(selectedUser.maNguoiDung);
-      const newStatus = selectedUser.trangthai === 'HoatDong' ? 'khóa' : 'mở khóa';
-      addToast(`Đã ${newStatus} tài khoản ${selectedUser.hoten}`, 'success');
+      const currentSt = String(selectedUser.trangthai || 'HOATDONG').toUpperCase();
+      await toggleUserStatus(selectedUser.maNguoiDung, currentSt);
+      const label = currentSt === 'HOATDONG' ? 'khóa' : 'mở khóa';
+      addToast(`Đã ${label} tài khoản ${selectedUser.hoten}`, 'success');
       fetchUsers();
       closeModal();
     } catch (err) {
-      addToast(err.message || 'Có lỗi xảy ra', 'error');
+      addToast(err?.response?.data?.message || err?.message || 'Có lỗi xảy ra', 'error');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const roleBadgeClass = (code) => {
-    const map = { ADMIN: 'um-role--admin', HT: 'um-role--ht', CBQL: 'um-role--cbql', PH: 'um-role--ph', NHT: 'um-role--nht', GUEST: 'um-role--guest' };
-    return map[code] || '';
+  const roleBadgeClass = (nameOrCode) => {
+    const c = String(nameOrCode || '').toUpperCase();
+    if (c.includes('ADMIN')) return 'um-role--admin';
+    if (c.includes('HIEUTRUONG')) return 'um-role--ht';
+    if (c.includes('CANBO')) return 'um-role--cbql';
+    if (c.includes('PHUHUYNH')) return 'um-role--ph';
+    if (c.includes('NHATAITRO')) return 'um-role--nht';
+    return '';
   };
-
-  const getRoleName = (code) =>
-    roles.find((r) => r.maVaiTro === code)?.tenVaiTro || code;
 
   const dataWithStt = users.map((u, i) => ({ ...u, _stt: i + 1 }));
 
@@ -197,48 +275,57 @@ const UserManagement = () => {
     { key: '_stt', title: 'STT', width: 56 },
     {
       key: 'avatar', title: '', width: 48,
-      render: (_, row) => (
-        <div className="um-avatar">{getInitials(row.hoten)}</div>
-      ),
+      render: (_, row) => <div className="um-avatar">{getInitials(row.hoten)}</div>,
     },
     { key: 'hoten', title: 'Họ tên', render: (_, row) => <span className="um-name">{row.hoten}</span> },
+    { key: 'tenDangNhap', title: 'Tên đăng nhập', render: (_, row) => row.tenDangNhap || '—' },
     { key: 'email', title: 'Email', render: (_, row) => <span className="um-email">{row.email || '—'}</span> },
     { key: 'sdt', title: 'SĐT', render: (_, row) => row.sdt || '—' },
     {
-      key: 'maVaiTro', title: 'Vai trò',
+      key: 'tenVaiTro', title: 'Vai trò',
       render: (_, row) => (
-        <span className={`um-role ${roleBadgeClass(row.maVaiTro)}`}>{getRoleName(row.maVaiTro)}</span>
+        <span className={`um-role ${roleBadgeClass(row.tenVaiTro || row.roleCode)}`}>
+          {row.tenVaiTro || row.roleCode}
+        </span>
       ),
     },
     { key: 'trangthai', title: 'Trạng thái', render: (_, row) => statusBadge(row.trangthai) },
     {
       key: 'action', title: 'Hành động',
-      render: (_, row) => (
-        <div className="um-actions">
-          <button className="um-btn um-btn--edit" onClick={() => openEdit(row)} title="Chỉnh sửa">
-            <FiEdit2 />
-          </button>
-          <button
-            className={`um-btn ${row.trangthai === 'HoatDong' ? 'um-btn--lock' : 'um-btn--unlock'}`}
-            onClick={() => openToggle(row)}
-            title={row.trangthai === 'HoatDong' ? 'Khóa tài khoản' : 'Mở khóa'}
-          >
-            {row.trangthai === 'HoatDong' ? <FiLock /> : <FiUnlock />}
-          </button>
-          <button className="um-btn um-btn--delete" onClick={() => openDelete(row)} title="Xóa">
-            <FiTrash2 />
-          </button>
-        </div>
-      ),
+      render: (_, row) => {
+        const isActive = String(row.trangthai || '').toUpperCase() === 'HOATDONG';
+        const isSelf = Number(row.maNguoiDung) === Number(currentUserId);
+        return (
+          <div className="um-actions">
+            <button className="um-btn" onClick={() => openDetail(row)} title="Xem chi tiết">
+              <FiEye />
+            </button>
+            <button className="um-btn um-btn--edit" onClick={() => openEdit(row)} title="Chỉnh sửa">
+              <FiEdit2 />
+            </button>
+            <button
+              className={`um-btn ${isActive ? 'um-btn--lock' : 'um-btn--unlock'}`}
+              onClick={() => openToggle(row)}
+              disabled={isSelf}
+              title={isSelf ? 'Không thể tự khóa tài khoản của mình' : (isActive ? 'Khóa tài khoản' : 'Mở khóa')}
+            >
+              {isActive ? <FiLock /> : <FiUnlock />}
+            </button>
+          </div>
+        );
+      },
     },
   ];
+
+  const isSelfEdit = modalType === 'edit' && Number(selectedUser?.maNguoiDung) === Number(currentUserId);
+  const isSelectedActive = String(selectedUser?.trangthai || '').toUpperCase() === 'HOATDONG';
 
   return (
     <div className="user-management">
       <div className="um-header">
         <div>
           <h1>Quản lý người dùng</h1>
-          <p>Xem, thêm, sửa, khóa và phân quyền tài khoản trong hệ thống</p>
+          <p>Xem chi tiết, thêm, cập nhật và khóa/mở khóa tài khoản trong hệ thống</p>
         </div>
         <Button variant="primary" onClick={openAdd}>
           <FiPlus /> Thêm người dùng
@@ -250,7 +337,7 @@ const UserManagement = () => {
           <FiSearch className="um-search-icon" />
           <input
             className="um-search"
-            placeholder="Tìm kiếm tên, email, tên đăng nhập..."
+            placeholder="Tìm kiếm tên, email, tên đăng nhập, SĐT..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -276,6 +363,30 @@ const UserManagement = () => {
         />
       </div>
 
+      {/* Detail Modal */}
+      <Modal
+        isOpen={modalType === 'detail'}
+        onClose={closeModal}
+        title="Chi tiết tài khoản người dùng"
+        size="md"
+        footer={<Button variant="outline" onClick={closeModal}>Đóng</Button>}
+      >
+        {selectedUser && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.92rem' }}>
+            <div><strong>Mã người dùng:</strong> #{selectedUser.maNguoiDung}</div>
+            <div><strong>Họ và tên:</strong> {selectedUser.hoten}</div>
+            <div><strong>Tên đăng nhập:</strong> {selectedUser.tenDangNhap || '—'}</div>
+            <div><strong>Email:</strong> {selectedUser.email || '—'}</div>
+            <div><strong>Số điện thoại:</strong> {selectedUser.sdt || '—'}</div>
+            <div><strong>Địa chỉ:</strong> {selectedUser.diachi || '—'}</div>
+            <div><strong>Vai trò:</strong> {selectedUser.tenVaiTro}{selectedUser.moTaVaiTro ? ` (${selectedUser.moTaVaiTro})` : ''}</div>
+            <div><strong>Trạng thái:</strong> {statusBadge(selectedUser.trangthai)}</div>
+            <div><strong>Ngày tạo:</strong> {selectedUser.ngayTao ? formatDate(selectedUser.ngayTao) : '—'}</div>
+            <div><strong>Cập nhật gần nhất:</strong> {selectedUser.ngayCapNhat ? formatDate(selectedUser.ngayCapNhat) : '—'}</div>
+          </div>
+        )}
+      </Modal>
+
       {/* Add/Edit Modal */}
       <Modal
         isOpen={modalType === 'add' || modalType === 'edit'}
@@ -296,38 +407,22 @@ const UserManagement = () => {
           formErrors={formErrors}
           roles={roles}
           modalType={modalType}
+          isSelfEdit={isSelfEdit}
           onChange={handleFormChange}
         />
       </Modal>
 
-      {/* Delete Confirm */}
-      <Modal
-        isOpen={modalType === 'delete'}
-        onClose={closeModal}
-        title="Xác nhận xóa"
-        size="sm"
-        footer={
-          <>
-            <Button variant="outline" onClick={closeModal}>Hủy</Button>
-            <Button variant="danger" loading={actionLoading} onClick={handleDelete}>Xác nhận xóa</Button>
-          </>
-        }
-      >
-        <p>Bạn chắc chắn muốn <strong>xóa vĩnh viễn</strong> tài khoản của <strong>{selectedUser?.hoten}</strong>?</p>
-        <p className="um-warn">Hành động này không thể hoàn tác.</p>
-      </Modal>
-
-      {/* Toggle Confirm */}
+      {/* Toggle Lock/Unlock Confirm */}
       <Modal
         isOpen={modalType === 'toggle'}
         onClose={closeModal}
-        title={selectedUser?.trangthai === 'HoatDong' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
+        title={isSelectedActive ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
         size="sm"
         footer={
           <>
             <Button variant="outline" onClick={closeModal}>Hủy</Button>
             <Button
-              variant={selectedUser?.trangthai === 'HoatDong' ? 'danger' : 'primary'}
+              variant={isSelectedActive ? 'danger' : 'primary'}
               loading={actionLoading}
               onClick={handleToggle}
             >
@@ -337,7 +432,7 @@ const UserManagement = () => {
         }
       >
         <p>
-          {selectedUser?.trangthai === 'HoatDong'
+          {isSelectedActive
             ? `Khóa tài khoản của ${selectedUser?.hoten}? Người dùng sẽ không thể đăng nhập.`
             : `Mở khóa tài khoản của ${selectedUser?.hoten}?`
           }

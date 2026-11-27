@@ -44,11 +44,15 @@ const CampaignDetail = () => {
         setCampaign(campRes);
         setActiveImage(campRes?.anhBia || '');
 
-        // Lấy thêm minh chứng tài liệu giải ngân nếu có
-        try {
-          const evisRes = await getAllEvidences({ mabaitaitro: id });
-          setEvidences(evisRes.data || []);
-        } catch {
+        // Chỉ gọi /fundraiser/evidences khi người dùng có quyền CANBO hoặc ADMIN để tránh 401/403 ở trang công khai
+        if (isAuthenticated && hasRole(['CANBO', 'ADMIN'])) {
+          try {
+            const evisRes = await getAllEvidences({ mabaitaitro: id });
+            setEvidences(evisRes.data || []);
+          } catch {
+            setEvidences([]);
+          }
+        } else {
           setEvidences([]);
         }
       } catch (err) {

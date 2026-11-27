@@ -3,17 +3,18 @@ import { FiEye } from 'react-icons/fi';
 import Tabs from '../../../../components/Tabs/Tabs';
 import Table from '../../../../components/Table/Table';
 import Modal from '../../../../components/Modal/Modal';
-import { getPrincipalFeedbacks } from '../../../../services/feedbackService';
+import { getPrincipalFeedbacks, getPrincipalFeedbackDetail } from '../../../../services/feedbackService';
 import './ParentFeedbackView.css';
 
 const TABS = [
-  { label: 'Chưa xử lý', value: 'ChoXuLy' },
-  { label: 'Đã xử lý', value: 'DaXuLy' },
-  { label: 'Tất cả', value: 'all' },
+  { label: 'Chờ xử lý', value: 'CHOXULY' },
+  { label: 'Đã xử lý', value: 'DAXULY' },
+  { label: 'Từ chối', value: 'TUCHOI' },
+  { label: 'Tất cả', value: 'ALL' },
 ];
 
 const ParentFeedbackView = () => {
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('ALL');
   const [feedbacks, setFeedbacks] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,22 +34,26 @@ const ParentFeedbackView = () => {
     fetchData();
   }, []);
 
-  const filtered = activeTab === 'all'
-    ? feedbacks
-    : feedbacks.filter((f) => {
-        const st = String(f.trangthai || '').toUpperCase();
-        if (activeTab === 'ChoXuLy') return st === 'CHOXULY' || st === 'CHODUYET';
-        if (activeTab === 'DaXuLy') return st === 'DAXULY' || st === 'DADUYET';
-        return true;
-      });
+  const handleViewDetail = async (row) => {
+    setSelected(row);
+    try {
+      const detail = await getPrincipalFeedbackDetail(row.maPhanHoi || row.id);
+      if (detail) setSelected(detail);
+    } catch {
+      // Giữ dữ liệu hàng hiện tại nếu detail lỗi
+    }
+  };
 
-  const pendingCount = feedbacks.filter((f) => {
-    const st = String(f.trangthai || '').toUpperCase();
-    return st === 'CHOXULY' || st === 'CHODUYET';
-  }).length;
+  const filtered = activeTab === 'ALL'
+    ? feedbacks
+    : feedbacks.filter((f) => String(f.trangThai || f.trangthai || '').toUpperCase() === activeTab);
+
+  const pendingCount = feedbacks.filter(
+    (f) => String(f.trangThai || f.trangthai || '').toUpperCase() === 'CHOXULY'
+  ).length;
 
   const tabs = TABS.map((t) =>
-    t.value === 'ChoXuLy' ? { ...t, badge: pendingCount || undefined } : t
+    t.value === 'CHOXULY' ? { ...t, badge: pendingCount || undefined } : t
   );
 
   const dataWithStt = filtered.map((f, i) => ({ ...f, _stt: i + 1 }));
@@ -72,7 +77,7 @@ const ParentFeedbackView = () => {
     {
       key: 'action', title: '',
       render: (_, row) => (
-        <button className="pfv-btn" onClick={() => setSelected(row)}>
+        <button className="pfv-btn" onClick={() => handleViewDetail(row)}>
           <FiEye /> Xem
         </button>
       ),

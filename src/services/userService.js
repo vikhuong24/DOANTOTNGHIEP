@@ -47,15 +47,23 @@ export const getAllUsers = async (params = {}) => {
         size: params.size,
       },
     });
-    const list = unwrapList(res);
+    const payload = res?.data?.result ?? res?.data?.data ?? res?.data;
+    const isPaged = payload && Array.isArray(payload.content);
+    const list = isPaged ? payload.content : unwrapList(res);
     let enriched = list.map(normalizeUser);
 
     if (params.trangthai) {
       const st = String(params.trangthai).toUpperCase();
-      enriched = enriched.filter((u) => u.trangthai?.toUpperCase() === st);
+      enriched = enriched.filter((u) => String(u.trangthai || '').toUpperCase() === st);
     }
 
-    return { data: enriched, items: enriched, total: enriched.length };
+    return {
+      data: enriched,
+      items: enriched,
+      total: isPaged ? (payload.totalElements ?? enriched.length) : enriched.length,
+      totalPages: isPaged ? (payload.totalPages ?? 1) : 1,
+      page: isPaged ? (payload.page ?? 0) : 0,
+    };
   } catch (err) {
     console.error('Lỗi khi lấy danh sách người dùng:', err);
     throw err;
